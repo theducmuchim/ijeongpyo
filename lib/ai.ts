@@ -40,6 +40,8 @@ export async function askAI(system: string, images: ImagePayload[], text: string
 // 무료 한도 초과(429) 같은 오류를 사용자에게 보여 줄 말로 바꾼다.
 export function friendlyError(e: unknown): { message: string; status: number } {
   const text = String((e as { message?: string })?.message ?? e);
+  // Vercel 로그에서 원인을 볼 수 있게 남긴다 (키 값은 오류 문장에 들어가지 않는다)
+  console.error(`[ai] Gemini 호출 실패 (모델 ${MODEL}): ${text.slice(0, 300)}`);
   if (/429|RESOURCE_EXHAUSTED|quota/i.test(text)) {
     return { message: "지금은 사용하는 사람이 많아요. 잠시 뒤 다시 해 주세요.", status: 429 };
   }
