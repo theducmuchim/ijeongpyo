@@ -116,7 +116,7 @@ export default function LostPage() {
     <main className="screen">
       <AppBar title="길 찾기" back={`/walk/${route.id}`} />
       <div className="body">
-        <p className="title-large">괜찮아요. 같이 찾아봐요.</p>
+        <p className="title-large">주변 사진을 찍으면 지금 위치를 찾아요.</p>
         <MockBadge show={result?.mock} />
         <CameraInput id="lost-photo" onPick={onPhoto} />
 
@@ -126,7 +126,7 @@ export default function LostPage() {
               <span className="cam-icon">
                 <Icon name="camera" size={36} />
               </span>
-              <span className="body-large">눌러서 주변 사진 찍기</span>
+              <span className="body-large">눌러서 사진 찍기</span>
               <span className="body-medium">간판이나 출구 번호가 보이게 찍어 주세요</span>
             </span>
           </label>
@@ -134,10 +134,10 @@ export default function LostPage() {
 
         {busy && (
           <AiWaiting
-            title="사진을 보고 있어요"
-            hint="보통 5~15초 걸려요"
+            title="위치 찾는 중"
+            hint="5~15초 걸려요"
             photoUrl={previewUrl}
-            steps={["사진 보내는 중", "간판과 출구 번호 찾는 중", "등록한 카드와 비교하는 중", "다음에 할 일 고르는 중"]}
+            steps={["사진 보내는 중", "간판과 출구 번호 찾는 중", "카드와 비교하는 중", "다음 할 일 정하는 중"]}
           />
         )}
 
@@ -149,14 +149,14 @@ export default function LostPage() {
             </div>
             <div className="text">
               <p className="label-medium muted">사진에서 찾은 것</p>
-              <p className="body-large">{result.seenLandmarks.length ? result.seenLandmarks.join(", ") : "아직 뚜렷한 단서가 없어요"}</p>
+              <p className="body-large">{result.seenLandmarks.length ? result.seenLandmarks.join(", ") : "알아볼 만한 간판이 없어요"}</p>
             </div>
           </div>
         )}
 
         {result && confident && !busy && (
           <div className="result-card" aria-live="polite">
-            <p className="label-large">이렇게 해 보세요</p>
+            <p className="label-large">다음에 할 일</p>
             <p className="guide">{result.nextStep}</p>
             <p className="body-medium">{result.reasonForUser}</p>
           </div>
@@ -164,16 +164,16 @@ export default function LostPage() {
 
         {result && !confident && !gaveUp && !busy && (
           <div className="surface-card" aria-live="polite">
-            <p className="title-medium">{result.askPhoto ?? "주변을 한 방향 더 찍어 주세요"}</p>
-            <p className="body-medium muted">사진만으로는 아직 확실하지 않아요. 남은 기회 {triesLeft}번.</p>
+            <p className="title-medium">{result.askPhoto ?? "다른 방향도 한 장 찍어 주세요"}</p>
+            <p className="body-medium muted">사진만으로는 확실하지 않아요. {triesLeft}번 더 찍을 수 있어요.</p>
           </div>
         )}
 
         {gaveUp && !busy && (
           <div className="surface-card">
-            <p className="title-medium">이 장소로 돌아갈 수 있나요?</p>
+            <p className="title-medium">마지막으로 지나간 곳이에요</p>
             <PhotoView photoId={lastCard.photoId} height={200} caption={`${lastCard.order}번 카드 사진`} />
-            <p className="body-medium muted">마지막으로 지나간 {lastCard.order}번 카드 장소예요: {lastCard.instruction}</p>
+            <p className="body-medium muted">{lastCard.order}번 카드: {lastCard.instruction}</p>
           </div>
         )}
 

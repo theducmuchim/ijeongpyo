@@ -18,7 +18,7 @@ function mockCards(junctions: Body["junctions"]): CardDraft[] {
       photoDescription: `(시험 모드) ${i + 1}번째 갈림길 사진`,
       landmark: { name: j.note || `${i + 1}번 길잡이`, side: "ahead" },
       action: last ? "arrive" : "straight",
-      instruction: j.note || (last ? "여기가 도착 지점이에요" : "다음 갈림길까지 걸어가세요"),
+      instruction: j.note || (last ? "도착" : "다음 갈림길까지 가세요"),
       warning: null,
     };
   });
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   if (isMockMode()) return Response.json({ cards: mockCards(junctions), mock: true });
 
   if (!(await checkLimit(deviceId))) {
-    return Response.json({ error: "오늘 사용량을 다 썼어요. 내일 다시 해 주세요." }, { status: 429 });
+    return Response.json({ error: "오늘 쓸 수 있는 횟수를 다 썼어요. 내일 다시 해 주세요." }, { status: 429 });
   }
 
   // 사진은 순서대로 보내고, 메모는 번호를 붙여 글로 보낸다. 받은 사진과 글은 저장하지 않는다.
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       const cards = parseCards(raw, junctions.length);
       if (cards) return Response.json({ cards });
     }
-    return Response.json({ error: "카드를 만들지 못했어요. 메모로 직접 카드를 만들어 주세요." }, { status: 502 });
+    return Response.json({ error: "카드를 만들지 못했어요. 메모로 직접 만들어 주세요." }, { status: 502 });
   } catch (e) {
     const { message, status } = friendlyError(e);
     return Response.json({ error: message }, { status });

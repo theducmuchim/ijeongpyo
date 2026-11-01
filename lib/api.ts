@@ -12,7 +12,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok && !("nextStep" in json)) {
-    throw new Error((json as { error?: string }).error || "지금은 확인이 어려워요. 잠시 뒤 다시 해 주세요.");
+    throw new Error((json as { error?: string }).error || "서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.");
   }
   return json as T;
 }

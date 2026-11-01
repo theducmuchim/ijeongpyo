@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       photoDescription: `(시험 모드) 새로 찍은 ${c.order}번 갈림길 사진`,
       landmark: { name: "새 길잡이", side: c.side },
       instruction: c.instruction,
-      changeNote: "(시험 모드) AI 키가 없어서 문장은 그대로 두고 사진만 바꿨어요",
+      changeNote: "(시험 모드) 사진만 바꿨어요",
       warning: null,
       mock: true,
     };
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   }
 
   if (!(await checkLimit(deviceId))) {
-    return Response.json({ error: "오늘 사용량을 다 썼어요. 내일 다시 해 주세요." }, { status: 429 });
+    return Response.json({ error: "오늘 쓸 수 있는 횟수를 다 썼어요. 내일 다시 해 주세요." }, { status: 429 });
   }
 
   const question = [

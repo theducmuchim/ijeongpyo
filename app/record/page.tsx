@@ -69,7 +69,7 @@ export default function RecordPage() {
   }, []);
 
   function start() {
-    if (!name.trim()) return setError("길 이름을 먼저 적어 주세요");
+    if (!name.trim()) return setError("길 이름을 적어 주세요");
     setError(null);
     setStarted(true);
     // 걷는 동안 GPS 기록. 위치를 못 쓰게 해도 사진과 메모만으로 등록할 수 있다.
@@ -100,7 +100,7 @@ export default function RecordPage() {
 
   function listen() {
     const rec = makeRecognizer();
-    if (!rec) return setError("이 브라우저는 음성 메모를 지원하지 않아요. 글로 적어 주세요.");
+    if (!rec) return setError("이 브라우저에서는 음성 입력이 안 돼요. 직접 적어 주세요.");
     rec.lang = "ko-KR";
     rec.interimResults = false;
     rec.onresult = (e) => setNote(e.results[0][0].transcript);
@@ -149,7 +149,7 @@ export default function RecordPage() {
       }));
     } catch (e) {
       // AI가 안 될 때도 등록이 끊기지 않게, 메모로 카드를 만들고 확인 화면에서 고치게 한다.
-      toast(`${(e as Error).message} 메모로 카드를 만들었으니 확인 화면에서 고쳐 주세요.`);
+      toast(`${(e as Error).message} 메모로 카드를 만들었어요. 확인 화면에서 고쳐 주세요.`);
       cards = junctions.map((j, i) => ({
         id: newId(),
         order: i + 1,
@@ -157,7 +157,7 @@ export default function RecordPage() {
         photoDescription: j.note || `${i + 1}번째 갈림길`,
         landmark: { name: j.note || `${i + 1}번 길잡이`, side: "ahead" },
         action: i === junctions.length - 1 ? "arrive" : "straight",
-        instruction: j.note || "여기서 다음 갈림길로 가세요",
+        instruction: j.note || "다음 갈림길까지 가세요",
         userNote: j.note,
         warning: null,
         lat: j.lat,
@@ -182,7 +182,7 @@ export default function RecordPage() {
         <AppBar title="새 길 등록" back="/" />
         <div className="body">
           <p className="body-large">
-            같이 걸어 줄 사람과 함께 시작하세요. 갈림길마다 사진 한 장과 짧은 메모를 남기면, AI가 길 안내 카드로 정리해 줘요.
+            보호자나 친구와 같이 걸으면서 등록해요. 갈림길마다 사진 한 장과 짧은 메모를 남기면 AI가 안내 카드로 만들어요.
           </p>
           <label className="label-large" htmlFor="route-name">
             길 이름
@@ -196,17 +196,17 @@ export default function RecordPage() {
           />
           {showNotice && (
             <div className="surface-card">
-              <p className="title-medium">사진은 어디로 가나요?</p>
+              <p className="title-medium">사진은 구글 AI로 보내져요</p>
               <p className="body-medium muted">
-                카드를 만들 때 사진이 구글 AI(Gemini)로 보내져 분석돼요. 얼굴이나 집 주소, 문패가 나오지 않게 찍어 주세요.
-                사진과 다닌 길은 이 휴대폰에만 저장돼요.
+                카드를 만들 때 사진을 구글 Gemini로 보내요. 얼굴, 집 주소, 문패가 찍히지 않게 해 주세요. 사진과 길 기록은 이
+                휴대폰에만 저장돼요.
               </p>
               <button
                 className="btn btn-text label-large"
                 style={{ alignSelf: "flex-start" }}
                 onClick={() => settings && saveSettings({ ...settings, seenPhotoNotice: true })}
               >
-                알겠어요
+                확인
               </button>
             </div>
           )}
@@ -226,14 +226,14 @@ export default function RecordPage() {
         <AppBar title={`새 길 등록 · ${name}`} />
         <div className="body">
           <AiWaiting
-            title="AI가 길 안내 카드를 만들고 있어요"
-            hint="보통 10~30초 걸려요. 화면을 끄지 말고 기다려 주세요."
+            title="안내 카드 만드는 중"
+            hint="10~30초 걸려요. 화면을 끄지 마세요."
             photoId={junctions.at(-1)?.photoId}
             steps={[
-              `갈림길 사진 ${junctions.length}장 보내는 중`,
-              "오래 남는 간판과 건물 찾는 중",
-              "갈림길마다 길잡이 고르는 중",
-              "안내 문장 다듬는 중",
+              `사진 ${junctions.length}장 보내는 중`,
+              "간판과 건물 찾는 중",
+              "길잡이 고르는 중",
+              "안내 문장 쓰는 중",
             ]}
           />
         </div>
@@ -254,8 +254,8 @@ export default function RecordPage() {
               <span className="cam-icon">
                 <Icon name="camera" size={36} />
               </span>
-              <span className="body-large">눌러서 갈림길 사진 찍기</span>
-              <span className="body-medium">간판이 보이게, 사람이 적은 쪽을 찍어 주세요</span>
+              <span className="body-large">눌러서 사진 찍기</span>
+              <span className="body-medium">간판이 보이게, 사람이 적은 쪽으로 찍어 주세요</span>
             </span>
           )}
         </label>
@@ -292,12 +292,12 @@ export default function RecordPage() {
             <Icon name="mic" />
           </button>
           <div className="text">
-            <p className="label-medium muted">{listening ? "듣고 있어요…" : "메모 (예: 꽃집에서 왼쪽)"}</p>
+            <p className="label-medium muted">{listening ? "듣는 중…" : "메모 (예: 꽃집에서 왼쪽)"}</p>
             <input
               className="field"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="말하거나 직접 적어 주세요"
+              placeholder="말하거나 적어 주세요"
               aria-label="갈림길 메모"
             />
           </div>

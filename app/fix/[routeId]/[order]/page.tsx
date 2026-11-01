@@ -9,6 +9,7 @@ import { applyReplacement, suggestReplacement } from "@/lib/replaceCard";
 import { setResume } from "@/lib/resume";
 import { toast } from "@/lib/toast";
 import { logEvent } from "@/lib/usageLog";
+import { josa } from "@/lib/josa";
 import type { ReplaceResult, Route } from "@/types";
 
 // 2차 기능: 길잡이가 없어졌거나 바뀌었을 때, 같은 자리에서 다시 찍어 카드 한 장을 고친다.
@@ -65,7 +66,7 @@ export default function FixLandmarkPage() {
     const id = await savePhoto(photo.blob);
     await applyReplacement(route, index, id, result, text);
     logEvent(route.id, "landmark_replaced");
-    toast(`${card.order}번 카드를 새 길잡이로 바꿨어요`);
+    toast(`${card.order}번 카드를 바꿨어요`);
     backToWalk();
   }
 
@@ -90,8 +91,7 @@ export default function FixLandmarkPage() {
         {!photo && (
           <>
             <p className="body-large">
-              <b>{card.landmark.name}</b>이(가) 안 보이나요? 가게가 바뀌거나 간판이 없어지는 일은 흔해요. 이 자리에서 다시
-              찍으면 AI가 새 길잡이를 골라 줘요.
+              {josa(card.landmark.name, "이/가")} 안 보이면 이 자리를 다시 찍어 주세요. AI가 새 길잡이를 골라요.
             </p>
             <div className="surface-card" style={{ gap: 12 }}>
               <p className="label-medium muted">지금 카드</p>
@@ -103,17 +103,17 @@ export default function FixLandmarkPage() {
               <Icon name="camera" size={28} /> 이 자리 다시 찍기
             </label>
             <button className="btn btn-text label-large center" onClick={backToWalk}>
-              그냥 돌아가기
+              돌아가기
             </button>
           </>
         )}
 
         {photo && working && (
           <AiWaiting
-            title="새 길잡이를 고르고 있어요"
-            hint="보통 5~15초 걸려요"
+            title="새 길잡이 고르는 중"
+            hint="5~15초 걸려요"
             photoUrl={photo.url}
-            steps={["새 사진 보내는 중", "오래 남는 간판과 건물 찾는 중", "안내 문장 새로 쓰는 중"]}
+            steps={["사진 보내는 중", "간판과 건물 찾는 중", "안내 문장 쓰는 중"]}
           />
         )}
 
@@ -130,13 +130,13 @@ export default function FixLandmarkPage() {
             )}
             {failed && (
               <div className="surface-card error-card">
-                <p className="title-medium">AI가 답하지 못했어요</p>
-                <p className="body-medium">{failed} 사진은 바꿀 수 있으니, 아래 문장을 직접 고쳐 주세요.</p>
+                <p className="title-medium">AI 답을 받지 못했어요</p>
+                <p className="body-medium">사진만 바꾸고, 문장은 아래에서 직접 고쳐 주세요.</p>
               </div>
             )}
             {result?.warning && (
               <div className="surface-card warn-card">
-                <p className="title-medium">다시 찍으면 더 좋겠어요</p>
+                <p className="title-medium">다시 찍는 게 좋아요</p>
                 <p className="body-medium">{result.warning}</p>
               </div>
             )}
@@ -162,7 +162,7 @@ export default function FixLandmarkPage() {
             </div>
 
             <label className="label-large" htmlFor="fix-text">
-              새 안내 문장 <span className="muted">(눌러서 고칠 수 있어요)</span>
+              새 안내 문장
             </label>
             <textarea id="fix-text" className="field body-large" rows={2} value={text} onChange={(e) => setText(e.target.value)} />
 

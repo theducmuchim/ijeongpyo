@@ -51,7 +51,7 @@ export function parseWhereAmI(raw: string): WhereAmIResult | null {
   if (!parsed.success) return null;
   const r = parsed.data;
   // 확실하지 않은데 사진 요청이 비어 있으면 기본 요청을 채운다 (추측 안내 방지)
-  if (r.confidence < 0.6 && !r.askPhoto) r.askPhoto = "주변을 한 방향 더 찍어 주세요";
+  if (r.confidence < 0.6 && !r.askPhoto) r.askPhoto = "다른 방향도 한 장 찍어 주세요";
   return r;
 }
 

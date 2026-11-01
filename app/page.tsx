@@ -32,9 +32,9 @@ export default function Home() {
         {routes?.length === 0 && (
           <div className="empty">
             <EmptySignpost />
-            <p className="title-large">아직 저장한 길이 없어요</p>
+            <p className="title-large">저장한 길이 없어요</p>
             <p className="body-medium muted">
-              자주 다니는 길을 가족이나 친구와 한 번 같이 걸으며 등록해 보세요. 갈림길마다 사진과 메모만 남기면 돼요.
+              자주 다니는 길을 보호자나 친구와 한 번 같이 걸으며 등록하세요. 갈림길마다 사진 한 장과 메모를 남기면 돼요.
             </p>
           </div>
         )}
@@ -52,7 +52,7 @@ export default function Home() {
             <span className="text">
               <p className="title-medium">{r.name}</p>
               <p className="body-medium muted">
-                카드 {r.cards.length}장 · {r.status === "ready" ? ago(r.lastWalkedAt) : "카드 확인이 필요해요"}
+                카드 {r.cards.length}장 · {r.status === "ready" ? ago(r.lastWalkedAt) : "카드 확인 전"}
               </p>
             </span>
             <Icon name="forward" />
@@ -63,10 +63,10 @@ export default function Home() {
         <div className="surface-card tonal-card">
           <p className="title-medium">자주 길을 잃나요?</p>
           <p className="body-medium">
-            익숙한 길에서도 자주 길을 잃는다면, 이름이 있는 증상일 수 있어요. 탓할 일이 아니에요.
+            익숙한 길에서도 자주 방향을 잃는 증상이 있어요. 발달성 지형적 방향감각 상실증(DTD)이라고 해요.
           </p>
           <Link href="/about" className="btn btn-text label-large" style={{ alignSelf: "flex-start" }}>
-            쉬운 설명 읽기
+            자세히 보기
           </Link>
         </div>
         <div style={{ height: 96 }} />

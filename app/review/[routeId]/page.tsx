@@ -7,6 +7,7 @@ import { db, deleteRoute, savePhoto } from "@/lib/db";
 import { shrinkPhoto } from "@/lib/image";
 import { applyReplacement, suggestReplacement } from "@/lib/replaceCard";
 import { toast } from "@/lib/toast";
+import { josa } from "@/lib/josa";
 import type { Route } from "@/types";
 
 const ACTION_LABEL = { straight: "곧장", left: "왼쪽으로", right: "오른쪽으로", arrive: "도착" } as const;
@@ -56,10 +57,11 @@ export default function ReviewPage() {
     try {
       const r = await suggestReplacement(route, i, small);
       setRoute(await applyReplacement(route, i, id, r));
-      toast(`${route.cards[i].order}번 카드를 새 사진에 맞게 고쳤어요`);
+      toast(`${route.cards[i].order}번 카드를 새 사진으로 바꿨어요`);
     } catch (e) {
       setRoute(await applyReplacement(route, i, id, null));
-      toast(`사진은 바꿨지만 ${(e as Error).message} 문장은 직접 확인해 주세요.`);
+      console.warn(e);
+      toast("사진만 바꿨어요. 문장은 직접 확인해 주세요.");
     } finally {
       setFixing(null);
     }
@@ -70,7 +72,7 @@ export default function ReviewPage() {
     await db.routes.put({ ...route, status: "ready" });
     // 브라우저가 공간이 부족할 때 길과 사진을 마음대로 지우지 않게 부탁한다
     navigator.storage?.persist?.().catch(() => {});
-    toast(`'${route.name}'을(를) 저장했어요. 이제 혼자 걸어 볼 수 있어요.`);
+    toast(`${josa(route.name, "을/를")} 저장했어요`);
     router.push("/");
   }
 
@@ -78,7 +80,7 @@ export default function ReviewPage() {
     if (!route) return;
     const ok = await ask({
       title: "이 길을 지울까요?",
-      body: `'${route.name}'의 카드 ${route.cards.length}장과 사진이 모두 지워져요. 되돌릴 수 없어요.`,
+      body: `카드 ${route.cards.length}장과 사진이 모두 지워지고, 되돌릴 수 없어요.`,
       ok: "지우기",
       danger: true,
     });
@@ -92,13 +94,13 @@ export default function ReviewPage() {
     <main className="screen">
       <AppBar title={`카드 확인 · ${route.cards.length}장`} back="/" />
       <div className="body" style={{ gap: 12 }}>
-        <p className="body-medium muted">같이 걸은 사람과 문장을 확인하고, 어색한 부분은 눌러서 고쳐 주세요. 사진을 누르면 다시 찍을 수 있어요.</p>
+        <p className="body-medium muted">문장이 어색하면 눌러서 고치세요. 사진을 누르면 다시 찍을 수 있어요.</p>
         <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {route.cards.map((c, i) => (
             <div key={c.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {c.warning && fixing !== i && (
                 <div className="surface-card warn-card">
-                  <p className="title-medium">{c.order}번 사진을 다시 찍으면 좋겠어요</p>
+                  <p className="title-medium">{c.order}번 사진을 다시 찍어 주세요</p>
                   <p className="body-medium">{c.warning}</p>
                   <label htmlFor={`retake-${c.id}`} className="btn btn-text label-large" style={{ alignSelf: "flex-start" }}>
                     <Icon name="camera" size={18} /> 다시 찍기
@@ -124,7 +126,7 @@ export default function ReviewPage() {
                   </p>
                   {fixing === i ? (
                     <>
-                      <p className="body-medium muted">AI가 새 사진을 보고 있어요…</p>
+                      <p className="body-medium muted">새 사진 보는 중…</p>
                       <div className="linear" />
                     </>
                   ) : (

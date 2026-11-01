@@ -25,22 +25,22 @@ export async function POST(req: Request) {
     const next = cards.find((c) => c.order === last + 1) ?? cards.find((c) => c.order === last);
     const result: WhereAmIResult =
       photos.length < 2
-        ? { ...FALLBACK, confidence: 0.4, askPhoto: "(시험 모드) 오른쪽도 한 장 찍어 줄래요?", nextStep: "사진을 한 장 더 보고 알려 드릴게요", mock: true }
+        ? { ...FALLBACK, confidence: 0.4, askPhoto: "(시험 모드) 오른쪽도 한 장 찍어 주세요", nextStep: "한 장 더 찍어 주세요", mock: true }
         : {
             status: "on_route",
             confidence: 0.8,
             seenLandmarks: [next?.landmarkName ?? "길잡이"],
             matchedCardOrder: next?.order ?? null,
-            nextStep: next?.instruction ?? "마지막 카드 장소로 돌아가 볼까요?",
+            nextStep: next?.instruction ?? "마지막으로 지나간 카드 장소로 돌아가세요",
             askPhoto: null,
-            reasonForUser: `(시험 모드) ${next?.order ?? last}번 카드 근처라고 가정했어요`,
+            reasonForUser: `(시험 모드) ${next?.order ?? last}번 카드 근처라고 가정한 답이에요`,
             mock: true,
           };
     return Response.json(result);
   }
 
   if (!(await checkLimit(deviceId))) {
-    return Response.json({ error: "오늘 사용량을 다 썼어요. 마지막 카드로 돌아가 볼까요?" }, { status: 429 });
+    return Response.json({ error: "오늘 쓸 수 있는 횟수를 다 썼어요. 마지막 카드 장소로 돌아가세요." }, { status: 429 });
   }
 
   try {

@@ -43,7 +43,7 @@ export function friendlyError(e: unknown): { message: string; status: number } {
   // Vercel 로그에서 원인을 볼 수 있게 남긴다 (키 값은 오류 문장에 들어가지 않는다)
   console.error(`[ai] Gemini 호출 실패 (모델 ${MODEL}): ${text.slice(0, 300)}`);
   if (/429|RESOURCE_EXHAUSTED|quota/i.test(text)) {
-    return { message: "지금은 사용하는 사람이 많아요. 잠시 뒤 다시 해 주세요.", status: 429 };
+    return { message: "사용하는 사람이 많아요. 잠시 뒤 다시 해 주세요.", status: 429 };
   }
-  return { message: "지금은 확인이 어려워요. 잠시 뒤 다시 해 주세요.", status: 502 };
+  return { message: "AI 답을 받지 못했어요. 잠시 뒤 다시 해 주세요.", status: 502 };
 }

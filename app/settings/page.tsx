@@ -8,6 +8,7 @@ import { saveJson } from "@/lib/download";
 import { saveSettings, useSettings, type Settings, type Theme } from "@/lib/settings";
 import { toast } from "@/lib/toast";
 import { clearEvents, exportPayload, loadEvents, summarize, type UsageSummary } from "@/lib/usageLog";
+import { josa } from "@/lib/josa";
 import type { Route } from "@/types";
 
 function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -19,12 +20,12 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   );
 }
 
-function Row({ title, desc, children }: { title: string; desc: string; children?: React.ReactNode }) {
+function Row({ title, desc, children }: { title: string; desc?: string; children?: React.ReactNode }) {
   return (
     <div className="setting-row">
       <div className="text">
         <p className="body-large">{title}</p>
-        <p className="body-medium muted">{desc}</p>
+        {desc && <p className="body-medium muted">{desc}</p>}
       </div>
       {children}
     </div>
@@ -73,7 +74,7 @@ function TestSection({ enabled, onToggle }: { enabled: boolean; onToggle: (v: bo
         instruction: c.instruction,
       })),
     });
-    if (ok) toast(`'${r.name}' 카드 글을 내보냈어요`);
+    if (ok) toast(`${josa(r.name, "을/를")} 내보냈어요`);
   }
 
   const rows: [string, string | number][] = summary
@@ -95,7 +96,7 @@ function TestSection({ enabled, onToggle }: { enabled: boolean; onToggle: (v: bo
   return (
     <>
       <p className="section-label label-large">시험 기간</p>
-      <Row title="사용 기록 남기기" desc="'길을 잃었어요'를 몇 번 눌렀는지 같은 횟수만 이 휴대폰에 남겨요. 사진과 위치는 남기지 않아요.">
+      <Row title="사용 기록 남기기" desc="'길을 잃었어요'를 누른 횟수 같은 숫자만 이 휴대폰에 남겨요. 사진과 위치는 남기지 않아요.">
         <Switch label="사용 기록 남기기" checked={enabled} onChange={onToggle} />
       </Row>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 16px 12px" }}>
@@ -109,7 +110,7 @@ function TestSection({ enabled, onToggle }: { enabled: boolean; onToggle: (v: bo
         </div>
         <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }} className="body-medium">
           <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} style={{ marginTop: 4 }} />
-          <span>위 기록을 시험 진행자에게 보내는 데 동의해요. (길 이름, 사진, 위치는 들어가지 않아요)</span>
+          <span>시험 진행자에게 이 기록을 보내는 데 동의해요. 길 이름, 사진, 위치는 들어가지 않아요.</span>
         </label>
         <div className="row">
           <button className="btn btn-outlined" onClick={clearLog}>
@@ -121,9 +122,9 @@ function TestSection({ enabled, onToggle }: { enabled: boolean; onToggle: (v: bo
         </div>
       </div>
 
-      <Row title="평가용 경로 내보내기" desc="카드 글만 파일로 저장해요. 컴퓨터의 평가 도구에 넣어 AI 정답률을 잴 때 써요." />
+      <Row title="평가용 경로 내보내기" desc="카드 글만 파일로 저장해요. 평가 도구(npm run eval)에 넣을 때 써요." />
       <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 16px 12px" }}>
-        {routes.length === 0 && <p className="body-medium muted">저장한 길이 아직 없어요.</p>}
+        {routes.length === 0 && <p className="body-medium muted">저장한 길이 없어요.</p>}
         {routes.map((r) => (
           <button key={r.id} className="btn btn-tonal" onClick={() => exportRoute(r)}>
             {r.name} · 카드 {r.cards.length}장 내보내기
@@ -145,7 +146,7 @@ function BackupSection() {
     try {
       const data = await makeBackup();
       if (data.routes.length === 0) {
-        toast("아직 저장한 길이 없어요");
+        toast("저장한 길이 없어요");
         return;
       }
       const ok = await saveJson(`ijeongpyo-backup-${day(new Date().toISOString())}.json`, data);
@@ -158,14 +159,14 @@ function BackupSection() {
   async function restore(file: File) {
     const ok = await ask({
       title: "백업을 불러올까요?",
-      body: "백업에 있는 길을 이 휴대폰에 넣어요. 같은 길이 이미 있으면 백업 내용으로 바뀌어요.",
+      body: "같은 길이 이미 있으면 백업한 내용으로 바뀌어요.",
       ok: "불러오기",
     });
     if (!ok) return;
     setBusy("load");
     try {
       const { added, replaced } = await restoreBackup(file);
-      toast(`길 ${added}개를 새로 넣고 ${replaced}개를 바꿨어요`);
+      toast(replaced ? `길 ${added}개를 불러오고 ${replaced}개를 바꿨어요` : `길 ${added}개를 불러왔어요`);
     } catch (e) {
       toast((e as Error).message);
     } finally {
@@ -177,13 +178,13 @@ function BackupSection() {
     <>
       <p className="section-label label-large">백업</p>
       <Row
-        title="길 백업하기"
-        desc="휴대폰을 바꾸거나 브라우저 기록을 지우면 길이 사라져요. 가끔 백업해서 안전한 곳에 두세요."
+        title="길 백업"
+        desc="휴대폰을 바꾸거나 브라우저 기록을 지우면 길이 사라져요."
       />
       <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 16px 12px" }}>
         <div className="row">
           <button className="btn btn-tonal" onClick={backup} disabled={busy !== null}>
-            <Icon name="download" size={20} /> {busy === "save" ? "묶는 중…" : "백업하기"}
+            <Icon name="download" size={20} /> {busy === "save" ? "만드는 중…" : "백업하기"}
           </button>
           <label className={`btn btn-outlined${busy ? " disabled" : ""}`} htmlFor="restore-file" aria-disabled={busy !== null}>
             <Icon name="upload" size={20} /> {busy === "load" ? "불러오는 중…" : "불러오기"}
@@ -228,15 +229,15 @@ export default function SettingsPage() {
       <AppBar title="설정" back="/" />
       <div style={{ paddingBottom: 24 }}>
         <p className="section-label label-large">안내</p>
-        <Row title="진동 안내" desc="다음 카드가 뜰 때 한 번 진동해요">
+        <Row title="진동 안내" desc="다음 카드가 뜨면 진동해요">
           <Switch label="진동 안내" checked={s.vibrate} onChange={(v) => set({ vibrate: v })} />
         </Row>
-        <Row title="음성 안내" desc="카드 문장을 소리로 읽어 줘요">
+        <Row title="음성 안내" desc="카드 문장을 읽어 줘요">
           <Switch label="음성 안내" checked={s.voice} onChange={(v) => set({ voice: v })} />
         </Row>
 
         <p className="section-label label-large">보호자</p>
-        <Row title="보호자에게 위치 보내기" desc="'길을 잃었어요' 화면에 버튼이 생겨요. 자동으로 보내지는 않아요.">
+        <Row title="보호자에게 위치 보내기" desc="'길을 잃었어요' 화면에 버튼이 생겨요. 저절로 보내지는 않아요.">
           <Switch label="보호자에게 위치 보내기" checked={s.guardianShare} onChange={(v) => set({ guardianShare: v })} />
         </Row>
         {s.guardianShare && (
@@ -248,7 +249,7 @@ export default function SettingsPage() {
         )}
 
         <p className="section-label label-large">보기</p>
-        <Row title="화면 밝기" desc="밤에 걸을 때는 어두운 화면이 눈이 덜 부셔요" />
+        <Row title="화면 밝기" />
         <div className="seg" role="group" aria-label="화면 밝기">
           {THEMES.map((t) => (
             <button key={t.value} aria-pressed={s.theme === t.value} onClick={() => set({ theme: t.value })}>
@@ -256,7 +257,7 @@ export default function SettingsPage() {
             </button>
           ))}
         </div>
-        <Row title="글씨 크게" desc="모든 화면의 글씨를 조금 크게 보여 줘요">
+        <Row title="글씨 크게" desc="모든 화면의 글씨를 키워요">
           <Switch label="글씨 크게" checked={s.largeText} onChange={(v) => set({ largeText: v })} />
         </Row>
 
@@ -265,10 +266,10 @@ export default function SettingsPage() {
 
         <div style={{ padding: "16px 16px 0" }}>
           <div className="surface-card">
-            <p className="title-medium">사진은 어디로 가나요?</p>
+            <p className="title-medium">사진 처리</p>
             <p className="body-medium muted">
-              길을 찾을 때만 구글 AI(Gemini)로 보내져 분석돼요. 무료 서비스라서 구글이 서비스 개선에 쓸 수 있어요. 얼굴이나 집 주소가
-              나오지 않게 찍어 주세요. 사진과 다닌 길은 이 휴대폰에만 저장돼요.
+              길을 등록하거나 찾을 때 사진을 구글 Gemini로 보내요. 무료 서비스라 구글이 서비스 개선에 쓸 수 있어요. 얼굴, 집 주소,
+              문패가 찍히지 않게 해 주세요. 사진과 길 기록은 이 휴대폰에만 저장돼요.
             </p>
           </div>
         </div>

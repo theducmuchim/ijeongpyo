@@ -68,7 +68,7 @@ export async function restoreBackup(file: File): Promise<{ added: number; replac
     throw new Error("이정표 백업 파일이 아니에요.");
   }
   const parsed = backupSchema.safeParse(json);
-  if (!parsed.success) throw new Error("이정표 백업 파일이 아니거나 내용이 깨졌어요.");
+  if (!parsed.success) throw new Error("이정표 백업 파일이 아니거나 파일이 깨졌어요.");
   const { routes, photos } = parsed.data;
   let added = 0;
   let replaced = 0;

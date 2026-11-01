@@ -149,7 +149,7 @@ export function MockBadge({ show }: { show?: boolean }) {
   if (!show) return null;
   return (
     <p className="chip label-medium" role="status">
-      시험 모드: AI 키가 없어서 예시 답을 보여 줘요
+      시험 모드 · AI 대신 예시 답이에요
     </p>
   );
 }

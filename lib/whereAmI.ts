@@ -14,9 +14,9 @@ export const FALLBACK: WhereAmIResult = {
   confidence: 0,
   seenLandmarks: [],
   matchedCardOrder: null,
-  nextStep: "마지막으로 지나간 카드 장소로 돌아가 볼까요?",
+  nextStep: "마지막으로 지나간 카드 장소로 돌아가세요",
   askPhoto: null,
-  reasonForUser: "지금은 사진만으로 확인이 어려워요",
+  reasonForUser: "사진만으로는 위치를 알 수 없어요",
 };
 
 // 카드 사진 대신 카드 설명 글만 보낸다 (비용과 속도 때문)

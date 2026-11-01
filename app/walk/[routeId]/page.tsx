@@ -16,6 +16,7 @@ import {
 import { setResume, takeResume } from "@/lib/resume";
 import { lastCardKey, loadSettings } from "@/lib/settings";
 import { logEvent } from "@/lib/usageLog";
+import { josa } from "@/lib/josa";
 import type { Route } from "@/types";
 
 const RETURN_SUFFIX = " 돌아오는 길";
@@ -73,19 +74,19 @@ function Arrived({ route, startedAt, offCount }: { route: Route; startedAt: numb
           <circle cx="60" cy="60" r="56" />
           <path d="M38 62 L54 77 L84 45" />
         </svg>
-        <p className="display-small">도착했어요!</p>
-        <p className="body-large muted">{route.name}을(를) 끝까지 걸었어요.</p>
+        <p className="display-small">도착했어요</p>
+        <p className="body-large muted">{josa(route.name, "을/를")} 끝까지 걸었어요.</p>
         <div className="stat-row" style={{ marginTop: 12 }}>
           <div className="stat">
             <span className="label-medium muted">걸린 시간</span>
             <span className="title-large">{minutes}분</span>
           </div>
           <div className="stat">
-            <span className="label-medium muted">지나온 카드</span>
+            <span className="label-medium muted">카드</span>
             <span className="title-large">{route.cards.length}장</span>
           </div>
           <div className="stat">
-            <span className="label-medium muted">헷갈린 곳</span>
+            <span className="label-medium muted">길 벗어남</span>
             <span className="title-large">{offCount}번</span>
           </div>
         </div>
@@ -172,7 +173,7 @@ export default function WalkPage() {
     if (!route) return;
     logEvent(route.id, "walk_end");
     if (loadSettings().vibrate && "vibrate" in navigator) navigator.vibrate([100, 60, 100, 60, 200]);
-    speak("도착했어요. 잘했어요!");
+    speak("도착했어요.");
     setArrived({ offCount: offCount.current });
   }
 
@@ -263,7 +264,7 @@ export default function WalkPage() {
           <p className="guide" aria-live="polite">
             {card.instruction}
           </p>
-          <p className="body-large muted">{next ? `다음 길잡이: ${next.landmark.name}` : "마지막 카드예요. 도착하면 아래 버튼을 눌러 주세요."}</p>
+          <p className="body-large muted">{next ? `다음 길잡이: ${next.landmark.name}` : "마지막 카드예요"}</p>
         </div>
 
         <Link
@@ -275,11 +276,11 @@ export default function WalkPage() {
         </Link>
 
         {autoMode === "manual" && (
-          <p className="label-medium muted">위치가 정확하지 않아서 버튼으로 카드를 넘겨 주세요.</p>
+          <p className="label-medium muted">위치가 정확하지 않아요. 카드를 직접 넘겨 주세요.</p>
         )}
         {offRoute && (
           <div className="banner body-medium">
-            혹시 길이 헷갈리나요? 같이 찾아봐요. 아래 &lsquo;길을 잃었어요&rsquo;를 눌러 주세요.
+            등록한 길에서 조금 멀어졌어요. 길이 헷갈리면 아래 &lsquo;길을 잃었어요&rsquo;를 누르세요.
           </div>
         )}
         <div className="row">
