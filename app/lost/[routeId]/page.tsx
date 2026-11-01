@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { AppBar, CameraInput, Icon, MockBadge, PhotoView } from "@/components/ui";
+import { AiWaiting, AppBar, CameraInput, Icon, MockBadge, PhotoView } from "@/components/ui";
 import { requestWhereAmI } from "@/lib/api";
 import { db } from "@/lib/db";
 import { blobToPayload, shrinkPhoto } from "@/lib/image";
+import { setResume } from "@/lib/resume";
 import { readLastCardOrder, useSettings } from "@/lib/settings";
 import { logEvent } from "@/lib/usageLog";
 import type { ImagePayload, Route, WhereAmIResult } from "@/types";
@@ -15,6 +15,7 @@ const MAX_TRIES = 3;
 
 export default function LostPage() {
   const { routeId } = useParams<{ routeId: string }>();
+  const router = useRouter();
   const [route, setRoute] = useState<Route | null | undefined>(undefined);
   const [photos, setPhotos] = useState<ImagePayload[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -106,6 +107,10 @@ export default function LostPage() {
   const triesLeft = MAX_TRIES - photos.length;
   const gaveUp = result && !confident && triesLeft <= 0;
   const lastCard = route.cards.find((c) => c.order === lastOrder) ?? route.cards[0];
+  const backTo = (order: number) => {
+    setResume(route.id, order);
+    router.push(`/walk/${route.id}`);
+  };
 
   return (
     <main className="screen">
@@ -116,18 +121,27 @@ export default function LostPage() {
         <CameraInput id="lost-photo" onPick={onPhoto} />
 
         {!result && !busy && (
-          <label htmlFor="lost-photo" className="camera" style={{ cursor: "pointer" }}>
-            <span style={{ display: "grid", gap: 8, placeItems: "center" }}>
-              <Icon name="camera" size={40} />
+          <label htmlFor="lost-photo" className="camera">
+            <span style={{ display: "grid", gap: 12, placeItems: "center" }}>
+              <span className="cam-icon">
+                <Icon name="camera" size={36} />
+              </span>
               <span className="body-large">눌러서 주변 사진 찍기</span>
               <span className="body-medium">간판이나 출구 번호가 보이게 찍어 주세요</span>
             </span>
           </label>
         )}
 
-        {busy && <p className="banner body-medium">사진을 보고 있어요…</p>}
+        {busy && (
+          <AiWaiting
+            title="사진을 보고 있어요"
+            hint="보통 5~15초 걸려요"
+            photoUrl={previewUrl}
+            steps={["사진 보내는 중", "간판과 출구 번호 찾는 중", "등록한 카드와 비교하는 중", "다음에 할 일 고르는 중"]}
+          />
+        )}
 
-        {result && previewUrl && (
+        {result && previewUrl && !busy && (
           <div className="list-row" style={{ background: "transparent", padding: 0 }}>
             <div className="photo" style={{ width: 120, height: 90, borderRadius: 16, flex: "none" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -140,7 +154,7 @@ export default function LostPage() {
           </div>
         )}
 
-        {result && confident && (
+        {result && confident && !busy && (
           <div className="result-card" aria-live="polite">
             <p className="label-large">이렇게 해 보세요</p>
             <p className="guide">{result.nextStep}</p>
@@ -148,14 +162,14 @@ export default function LostPage() {
           </div>
         )}
 
-        {result && !confident && !gaveUp && (
+        {result && !confident && !gaveUp && !busy && (
           <div className="surface-card" aria-live="polite">
             <p className="title-medium">{result.askPhoto ?? "주변을 한 방향 더 찍어 주세요"}</p>
             <p className="body-medium muted">사진만으로는 아직 확실하지 않아요. 남은 기회 {triesLeft}번.</p>
           </div>
         )}
 
-        {gaveUp && (
+        {gaveUp && !busy && (
           <div className="surface-card">
             <p className="title-medium">이 장소로 돌아갈 수 있나요?</p>
             <PhotoView photoId={lastCard.photoId} height={200} caption={`${lastCard.order}번 카드 사진`} />
@@ -167,14 +181,19 @@ export default function LostPage() {
         {error && <p className="banner body-medium">{error}</p>}
 
         <div className="grow" />
-        {result && triesLeft > 0 && (
+        {result && triesLeft > 0 && !busy && (
           <label htmlFor="lost-photo" className={`btn ${confident ? "btn-tonal" : "btn-filled"}`}>
             사진 한 장 더 찍기
           </label>
         )}
-        <Link href={`/walk/${route.id}`} className="btn btn-outlined">
+        {confident && result?.matchedCardOrder ? (
+          <button className="btn btn-filled" onClick={() => backTo(result.matchedCardOrder!)}>
+            {result.matchedCardOrder}번 카드부터 다시 걷기
+          </button>
+        ) : null}
+        <button className="btn btn-outlined" onClick={() => backTo(lastCard.order)}>
           마지막 카드로 돌아가기
-        </Link>
+        </button>
         {settings?.guardianShare && (
           <button className="btn btn-text label-large" style={{ alignSelf: "center" }} onClick={shareLocation}>
             {settings.guardianName ? `${settings.guardianName}에게` : "보호자에게"} 위치 보내기

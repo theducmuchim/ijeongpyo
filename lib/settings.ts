@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 // 설정은 이 휴대폰 안(localStorage)에만 둔다.
+export type Theme = "auto" | "light" | "dark";
 export type Settings = {
   vibrate: boolean;
   voice: boolean;
@@ -12,6 +13,7 @@ export type Settings = {
   largeText: boolean;
   seenPhotoNotice: boolean;
   usageLog: boolean;
+  theme: Theme; // auto: 휴대폰 설정을 따름
 };
 
 const KEY = "ijeongpyo.settings";
@@ -24,6 +26,7 @@ export const defaultSettings: Settings = {
   largeText: true,
   seenPhotoNotice: false,
   usageLog: true,
+  theme: "auto",
 };
 
 export function loadSettings(): Settings {
@@ -49,9 +52,26 @@ export function useSettings(): Settings | null {
   return useSyncExternalStore(subscribe, getSnapshot, () => null);
 }
 
+// 글씨 크기와 밝기 설정을 화면 전체에 적용한다
+export function applyAppearance(s: Settings) {
+  const root = document.documentElement;
+  root.dataset.large = String(s.largeText);
+  if (s.theme === "auto") delete root.dataset.theme;
+  else root.dataset.theme = s.theme;
+  // 휴대폰 위쪽 상태 표시줄 색도 맞춘다
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+    const forDark = (m.getAttribute("media") ?? "").includes("dark");
+    const dark = s.theme === "auto" ? forDark : s.theme === "dark";
+    m.setAttribute("content", dark ? "#141218" : "#fef7ff");
+  });
+}
+
 export function saveSettings(s: Settings) {
   cache = s;
   listeners.forEach((l) => l());
+  try {
+    applyAppearance(s);
+  } catch {}
   try {
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {

@@ -1,4 +1,4 @@
-/* Material 3 기본 색 체계(피그마 시안과 같은 색 역할 이름) */
+/* ───────────── 색 (Material 3 기본 색 체계, 피그마 시안과 같은 역할 이름) ───────────── */
 :root {
   --primary: #6750a4;
   --on-primary: #ffffff;
@@ -8,8 +8,13 @@
   --on-secondary-container: #1d192b;
   --tertiary-container: #ffd8e4;
   --on-tertiary-container: #31111d;
+  --error: #b3261e;
+  --error-container: #f9dedc;
+  --on-error-container: #410e0b;
   --surface: #fef7ff;
   --surface-container-low: #f7f2fa;
+  --surface-container: #f3edf7;
+  --surface-container-high: #ece6f0;
   --surface-container-highest: #e6e0e9;
   --on-surface: #1d1b20;
   --on-surface-variant: #49454f;
@@ -17,15 +22,91 @@
   --outline-variant: #cac4d0;
   --inverse-surface: #322f35;
   --inverse-on-surface: #f5eff7;
+  --inverse-primary: #d0bcff;
+  --scrim: rgba(0, 0, 0, 0.32);
+  --shadow: rgba(0, 0, 0, 0.15);
+
+  /* 움직임 (M3 기본 곡선과 시간) */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decel: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-accel: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --dur-short: 150ms;
+  --dur-medium: 300ms;
+  --dur-long: 500ms;
+
   --scale: 1;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
   color-scheme: light;
+}
+
+/* 어두운 화면: 휴대폰 설정을 따르거나(auto), 앱 설정에서 직접 고른다 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --primary: #d0bcff;
+    --on-primary: #381e72;
+    --primary-container: #4f378b;
+    --on-primary-container: #eaddff;
+    --secondary-container: #4a4458;
+    --on-secondary-container: #e8def8;
+    --tertiary-container: #633b48;
+    --on-tertiary-container: #ffd8e4;
+    --error: #f2b8b5;
+    --error-container: #8c1d18;
+    --on-error-container: #f9dedc;
+    --surface: #141218;
+    --surface-container-low: #1d1b20;
+    --surface-container: #211f26;
+    --surface-container-high: #2b2930;
+    --surface-container-highest: #36343b;
+    --on-surface: #e6e0e9;
+    --on-surface-variant: #cac4d0;
+    --outline: #938f99;
+    --outline-variant: #49454f;
+    --inverse-surface: #e6e0e9;
+    --inverse-on-surface: #322f35;
+    --inverse-primary: #6750a4;
+    --scrim: rgba(0, 0, 0, 0.6);
+    --shadow: rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --primary: #d0bcff;
+  --on-primary: #381e72;
+  --primary-container: #4f378b;
+  --on-primary-container: #eaddff;
+  --secondary-container: #4a4458;
+  --on-secondary-container: #e8def8;
+  --tertiary-container: #633b48;
+  --on-tertiary-container: #ffd8e4;
+  --error: #f2b8b5;
+  --error-container: #8c1d18;
+  --on-error-container: #f9dedc;
+  --surface: #141218;
+  --surface-container-low: #1d1b20;
+  --surface-container: #211f26;
+  --surface-container-high: #2b2930;
+  --surface-container-highest: #36343b;
+  --on-surface: #e6e0e9;
+  --on-surface-variant: #cac4d0;
+  --outline: #938f99;
+  --outline-variant: #49454f;
+  --inverse-surface: #e6e0e9;
+  --inverse-on-surface: #322f35;
+  --inverse-primary: #6750a4;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --shadow: rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
 }
 :root[data-large="true"] {
   --scale: 1.12;
 }
 
+/* ───────────── 기본 ───────────── */
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 html,
 body {
@@ -35,6 +116,7 @@ body {
   color: var(--on-surface);
   font-family: "Noto Sans KR", system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
 }
 button,
 input,
@@ -46,8 +128,16 @@ a {
   color: inherit;
   text-decoration: none;
 }
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+::selection {
+  background: var(--primary-container);
+}
 
-/* 휴대폰 한 화면 폭으로 고정 */
+/* 휴대폰 한 화면 폭으로 고정. 화면이 바뀔 때마다 살짝 떠오르며 나타난다 */
 .screen {
   max-width: 480px;
   min-height: 100dvh;
@@ -56,19 +146,27 @@ a {
   flex-direction: column;
   background: var(--surface);
   position: relative;
+  animation: screen-in var(--dur-medium) var(--ease-decel) both;
+}
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
 }
 .body {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 8px 16px 24px;
+  padding: 8px 16px calc(24px + var(--safe-bottom));
 }
 .grow {
   flex: 1;
 }
 
-/* M3 타입 스케일 (한글) */
+/* ───────────── 글자 (M3 타입 스케일, 한글) ───────────── */
+.display-small { font-size: calc(36px * var(--scale)); line-height: 1.22; font-weight: 700; margin: 0; }
 .headline-small { font-size: calc(24px * var(--scale)); line-height: 1.33; font-weight: 400; margin: 0; }
 .title-large { font-size: calc(22px * var(--scale)); line-height: 1.27; font-weight: 400; margin: 0; }
 .title-medium { font-size: calc(16px * var(--scale)); line-height: 1.5; font-weight: 500; margin: 0; }
@@ -79,24 +177,103 @@ a {
 .guide { font-size: calc(28px * var(--scale)); line-height: 1.29; font-weight: 700; margin: 0; word-break: keep-all; }
 .muted { color: var(--on-surface-variant); }
 .primary-text { color: var(--primary); }
+.error-text { color: var(--error); }
+p, h1, h2 { word-break: keep-all; }
 
-/* 앱바 */
+/* ───────────── 누르는 것들의 공통 효과 (M3 상태 레이어 + 물결) ───────────── */
+.btn,
+.icon-btn,
+.list-row,
+.fab,
+.seg button,
+.pressable {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform var(--dur-short) var(--ease-standard), box-shadow var(--dur-short) var(--ease-standard);
+}
+.btn::before,
+.icon-btn::before,
+.list-row::before,
+.fab::before,
+.seg button::before,
+.pressable::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity var(--dur-short) linear;
+  pointer-events: none;
+  z-index: -1;
+}
+@media (hover: hover) {
+  .btn:hover:not(:disabled)::before,
+  .icon-btn:hover::before,
+  .list-row:hover::before,
+  .fab:hover::before,
+  .seg button:hover::before,
+  .pressable:hover::before {
+    opacity: 0.08;
+  }
+}
+.btn:active:not(:disabled)::before,
+.icon-btn:active::before,
+.list-row:active::before,
+.fab:active::before,
+.seg button:active::before,
+.pressable:active::before {
+  opacity: 0.12;
+}
+.btn:active:not(:disabled),
+.list-row:active,
+.fab:active {
+  transform: scale(0.98);
+}
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.16;
+  transform: scale(0);
+  animation: ripple 550ms var(--ease-standard) forwards;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes ripple {
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* ───────────── 앱바 ───────────── */
 .appbar {
   display: flex;
   align-items: center;
   gap: 4px;
-  height: 64px;
-  padding: 0 4px;
+  min-height: calc(64px + var(--safe-top));
+  padding: var(--safe-top) 4px 0;
   position: sticky;
   top: 0;
   background: var(--surface);
-  z-index: 2;
+  z-index: 3;
+  transition: background var(--dur-medium) var(--ease-standard), box-shadow var(--dur-medium) var(--ease-standard);
+}
+.appbar.scrolled {
+  background: var(--surface-container);
+}
+.appbar h1:first-child {
+  margin-left: 16px;
 }
 .appbar h1 {
   flex: 1;
   font-size: 22px;
   font-weight: 400;
   margin: 0 0 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .icon-btn {
   width: 48px;
@@ -108,12 +285,10 @@ a {
   place-items: center;
   cursor: pointer;
   color: var(--on-surface-variant);
-}
-.icon-btn:active {
-  background: rgba(29, 27, 32, 0.1);
+  flex: none;
 }
 
-/* 버튼 */
+/* ───────────── 버튼 ───────────── */
 .btn {
   border: none;
   border-radius: 999px;
@@ -127,17 +302,51 @@ a {
   justify-content: center;
   gap: 8px;
   width: 100%;
+  text-align: center;
 }
 .btn:disabled { opacity: 0.38; cursor: default; }
 .btn-large { min-height: 72px; font-size: calc(22px * var(--scale)); }
 .btn-filled { background: var(--primary); color: var(--on-primary); }
+.btn-filled:not(:disabled) { box-shadow: 0 1px 2px var(--shadow); }
 .btn-tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
 .btn-outlined { background: transparent; color: var(--on-surface-variant); border: 1px solid var(--outline-variant); }
 .btn-text { background: transparent; color: var(--primary); width: auto; padding: 0 12px; }
+.btn-danger { background: transparent; color: var(--error); width: auto; padding: 0 12px; }
 .row { display: flex; gap: 12px; }
 .row > * { flex: 1; }
 
-/* 카드·면 */
+/* 가운데 정렬 글자 버튼 */
+.center { align-self: center; }
+
+/* 두세 가지 중 고르는 버튼 (M3 Segmented button) */
+.seg {
+  display: flex;
+  border: 1px solid var(--outline);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 0 16px 12px;
+}
+.seg button {
+  flex: 1;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--on-surface);
+  cursor: pointer;
+  font-size: calc(14px * var(--scale));
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.seg button + button { border-left: 1px solid var(--outline); }
+.seg button[aria-pressed="true"] {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+
+/* ───────────── 카드·면 ───────────── */
 .surface-card {
   background: var(--surface-container-low);
   border-radius: 16px;
@@ -148,6 +357,7 @@ a {
 }
 .tonal-card { background: var(--secondary-container); color: var(--on-secondary-container); }
 .warn-card { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+.error-card { background: var(--error-container); color: var(--on-error-container); }
 .result-card {
   background: var(--primary-container);
   color: var(--on-primary-container);
@@ -156,6 +366,14 @@ a {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  animation: pop-in var(--dur-long) var(--ease-decel) both;
+}
+.pop { animation: pop-in var(--dur-medium) var(--ease-decel) both; }
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
 }
 .chip {
   align-self: flex-start;
@@ -171,8 +389,10 @@ a {
   padding: 16px;
   border-radius: 16px;
   background: var(--surface-container-low);
+  cursor: pointer;
 }
 .list-row .text { flex: 1; min-width: 0; }
+.list-row .text p { overflow: hidden; text-overflow: ellipsis; }
 .avatar {
   width: 48px;
   height: 48px;
@@ -183,8 +403,22 @@ a {
   place-items: center;
   flex: none;
 }
+.stagger > * {
+  animation: rise-in var(--dur-long) var(--ease-decel) both;
+}
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(n + 6) { animation-delay: 200ms; }
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
 
-/* 사진 자리 */
+/* ───────────── 사진 ───────────── */
 .photo {
   width: 100%;
   border-radius: 24px;
@@ -193,9 +427,19 @@ a {
   display: grid;
   place-items: center;
   color: var(--on-surface-variant);
+  position: relative;
 }
-.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  animation: fade-in var(--dur-medium) linear both;
+}
 .photo.thumb { width: 72px; height: 72px; border-radius: 12px; flex: none; }
+@keyframes fade-in {
+  from { opacity: 0; }
+}
 .camera {
   border-radius: 24px;
   background: var(--inverse-surface);
@@ -206,34 +450,199 @@ a {
   text-align: center;
   padding: 24px;
   overflow: hidden;
+  cursor: pointer;
+  border: 2px dashed transparent;
+  transition: border-color var(--dur-short);
 }
-.camera img { width: 100%; border-radius: 16px; }
+.camera:active { border-color: var(--inverse-primary); }
+.camera.has-photo { padding: 0; background: transparent; }
+.camera .cam-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 36px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--inverse-on-surface) 14%, transparent);
+  animation: breathe 2.4s ease-in-out infinite;
+}
+@keyframes breathe {
+  50% { transform: scale(1.08); }
+}
 
-/* 진행 막대 */
+/* 사진을 살펴보는 중: 위아래로 훑는 빛 */
+.scanning { position: relative; }
+.scanning::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 30%;
+  top: -30%;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--inverse-primary) 45%, transparent), transparent);
+  animation: scan 1.8s var(--ease-standard) infinite;
+  pointer-events: none;
+}
+@keyframes scan {
+  to { top: 100%; }
+}
+
+/* ───────────── 불러오는 중 ───────────── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-container-high) 25%,
+    var(--surface-container-highest) 50%,
+    var(--surface-container-high) 75%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--surface-container-low);
+}
+.skeleton-row .skeleton.circle { width: 48px; height: 48px; border-radius: 24px; flex: none; }
+.skeleton-row .lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.skeleton.line { height: 14px; }
+
+/* 끝이 정해지지 않은 진행 막대 (M3 linear indeterminate) */
+.linear {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--secondary-container);
+  overflow: hidden;
+  position: relative;
+}
+.linear::before,
+.linear::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--primary);
+  border-radius: 2px;
+}
+.linear::before { animation: lin-a 2s var(--ease-standard) infinite; }
+.linear::after { animation: lin-b 2s var(--ease-standard) infinite; animation-delay: 1s; }
+@keyframes lin-a {
+  0% { left: -35%; right: 100%; }
+  60%, 100% { left: 100%; right: -90%; }
+}
+@keyframes lin-b {
+  0% { left: -200%; right: 100%; }
+  60%, 100% { left: 107%; right: -8%; }
+}
+
+/* AI를 기다리는 화면 */
+.ai-wait {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 20px;
+  border-radius: 28px;
+  background: var(--surface-container);
+  animation: pop-in var(--dur-medium) var(--ease-decel) both;
+}
+.ai-wait .orb {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  position: relative;
+}
+.ai-wait .orb::before,
+.ai-wait .orb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  opacity: 0;
+  animation: pulse-ring 2s var(--ease-decel) infinite;
+}
+.ai-wait .orb::after { animation-delay: 1s; }
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--on-surface-variant);
+  transition: color var(--dur-medium);
+}
+.steps .dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--outline-variant);
+  transition: background var(--dur-medium), border-color var(--dur-medium);
+}
+.steps li.now { color: var(--on-surface); font-weight: 500; }
+.steps li.now .dot { border-color: var(--primary); border-top-color: transparent; animation: spin 0.9s linear infinite; }
+.steps li.done .dot { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ───────────── 진행 막대 (걷기) ───────────── */
 .progress { display: flex; align-items: center; gap: 12px; }
-.progress .track { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-container-highest); overflow: hidden; }
-.progress .fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width 0.3s; }
+.progress .track { flex: 1; height: 8px; border-radius: 4px; background: var(--surface-container-highest); overflow: hidden; }
+.progress .fill { height: 100%; background: var(--primary); border-radius: 4px; transition: width var(--dur-long) var(--ease-standard); }
 
-/* 스위치 */
+/* 카드가 바뀔 때 옆에서 밀려 들어온다 */
+.card-in-next { animation: slide-next var(--dur-medium) var(--ease-decel) both; }
+.card-in-prev { animation: slide-prev var(--dur-medium) var(--ease-decel) both; }
+@keyframes slide-next {
+  from { opacity: 0; transform: translateX(40px); }
+}
+@keyframes slide-prev {
+  from { opacity: 0; transform: translateX(-40px); }
+}
+
+/* ───────────── 스위치 ───────────── */
 .setting-row { display: flex; align-items: center; gap: 16px; padding: 12px 16px; }
 .setting-row .text { flex: 1; }
 .switch { position: relative; width: 52px; height: 32px; flex: none; }
-.switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.switch input { opacity: 0; width: 100%; height: 100%; position: absolute; margin: 0; cursor: pointer; z-index: 1; }
 .switch span {
-  position: absolute; inset: 0; border-radius: 16px; cursor: pointer;
-  background: var(--surface-container-highest); border: 2px solid var(--outline); transition: 0.2s;
+  position: absolute; inset: 0; border-radius: 16px;
+  background: var(--surface-container-highest); border: 2px solid var(--outline);
+  transition: background var(--dur-short) var(--ease-standard), border-color var(--dur-short);
 }
 .switch span::after {
   content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%;
-  left: 6px; top: 6px; background: var(--outline); transition: 0.2s;
+  left: 6px; top: 6px; background: var(--outline);
+  transition: all var(--dur-medium) var(--ease-standard);
 }
 .switch input:checked + span { background: var(--primary); border-color: var(--primary); }
 .switch input:checked + span::after { width: 24px; height: 24px; left: 22px; top: 2px; background: var(--on-primary); }
+.switch input:active + span::after { width: 28px; height: 28px; top: 0; left: 2px; }
+.switch input:checked:active + span::after { left: 20px; }
+.switch input:focus-visible + span { outline: 3px solid var(--primary); outline-offset: 2px; }
 .section-label { padding: 16px 16px 4px; color: var(--primary); }
 
+/* ───────────── 떠 있는 버튼 ───────────── */
 .fab {
   position: fixed;
-  bottom: 32px;
+  bottom: calc(24px + var(--safe-bottom));
   right: max(16px, calc(50vw - 240px + 16px));
   height: 80px;
   border-radius: 20px;
@@ -246,9 +655,16 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 8px var(--shadow), 0 1px 3px var(--shadow);
   cursor: pointer;
+  z-index: 4;
+  animation: fab-in var(--dur-long) var(--ease-decel) 150ms both;
 }
+@keyframes fab-in {
+  from { opacity: 0; transform: scale(0.6); }
+}
+
+/* ───────────── 입력칸 ───────────── */
 .field {
   width: 100%;
   border: 1px solid var(--outline);
@@ -256,12 +672,182 @@ a {
   padding: 12px 16px;
   background: transparent;
   font-size: 16px;
+  transition: border-color var(--dur-short), box-shadow var(--dur-short);
 }
+.field:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+.field::placeholder { color: var(--on-surface-variant); opacity: 0.8; }
 textarea.field { resize: vertical; min-height: 64px; }
 .banner {
   background: var(--inverse-surface);
   color: var(--inverse-on-surface);
   border-radius: 12px;
   padding: 12px 16px;
+  animation: pop-in var(--dur-medium) var(--ease-decel) both;
 }
 .hidden-input { display: none; }
+
+/* ───────────── 아래에서 잠깐 뜨는 알림 (M3 Snackbar) ───────────── */
+.snackbar-wrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(16px + var(--safe-bottom));
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  z-index: 20;
+  pointer-events: none;
+}
+.snackbar {
+  max-width: 448px;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 8px;
+  background: var(--inverse-surface);
+  color: var(--inverse-on-surface);
+  box-shadow: 0 4px 12px var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 16px;
+  pointer-events: auto;
+  animation: snack-in var(--dur-medium) var(--ease-decel) both;
+}
+.snackbar.out { animation: snack-out var(--dur-short) var(--ease-accel) both; }
+.snackbar p { flex: 1; padding: 10px 0; }
+.snackbar button {
+  border: none;
+  background: transparent;
+  color: var(--inverse-primary);
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+@keyframes snack-in {
+  from { opacity: 0; transform: translateY(24px); }
+}
+@keyframes snack-out {
+  to { opacity: 0; transform: translateY(12px); }
+}
+
+/* ───────────── 확인 창 (M3 Basic dialog) ───────────── */
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 30;
+  animation: fade-in var(--dur-medium) linear both;
+}
+.dialog {
+  width: 100%;
+  max-width: 340px;
+  border-radius: 28px;
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: dialog-in var(--dur-medium) var(--ease-decel) both;
+}
+.dialog:focus { outline: none; }
+.dialog .actions { display: flex; justify-content: flex-end; gap: 8px; }
+@keyframes dialog-in {
+  from { opacity: 0; transform: scale(0.9); }
+}
+
+/* ───────────── 빈 화면 그림 ───────────── */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 24px 16px 8px;
+}
+.empty svg { margin-bottom: 8px; }
+.empty .sway { transform-origin: 60px 104px; animation: sway 3.2s ease-in-out infinite; }
+@keyframes sway {
+  50% { transform: rotate(-3deg); }
+}
+
+/* ───────────── 도착 화면 ───────────── */
+.arrive {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  padding: 24px 16px;
+}
+.check-circle circle {
+  fill: var(--primary-container);
+  transform-origin: center;
+  animation: grow var(--dur-long) var(--ease-decel) both;
+}
+.check-circle path {
+  fill: none;
+  stroke: var(--on-primary-container);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: draw 450ms var(--ease-standard) 350ms forwards;
+}
+@keyframes grow {
+  from { transform: scale(0); }
+}
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+.confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.confetti i {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: fall 2.6s var(--ease-accel) forwards;
+}
+@keyframes fall {
+  0% { opacity: 1; transform: translateY(0) rotate(0); }
+  100% { opacity: 0; transform: translateY(80vh) rotate(540deg); }
+}
+.stat-row { display: flex; gap: 12px; width: 100%; }
+.stat {
+  flex: 1;
+  background: var(--surface-container-low);
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ───────────── 움직임 줄이기 (휴대폰 설정 존중) ───────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+  .scanning::after,
+  .confetti,
+  .ripple {
+    display: none;
+  }
+}

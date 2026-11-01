@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AppBar } from "@/components/ui";
+import { AppBar, Icon, useConfirm } from "@/components/ui";
+import { makeBackup, restoreBackup } from "@/lib/backup";
 import { db } from "@/lib/db";
 import { saveJson } from "@/lib/download";
-import { saveSettings, useSettings, type Settings } from "@/lib/settings";
+import { saveSettings, useSettings, type Settings, type Theme } from "@/lib/settings";
+import { toast } from "@/lib/toast";
 import { clearEvents, exportPayload, loadEvents, summarize, type UsageSummary } from "@/lib/usageLog";
 import type { Route } from "@/types";
 
@@ -38,6 +40,7 @@ function TestSection({ enabled, onToggle }: { enabled: boolean; onToggle: (v: bo
   const [routes, setRoutes] = useState<Route[]>([]);
   const [agree, setAgree] = useState(false);
   const [reload, setReload] = useState(0);
+  const [dialog, ask] = useConfirm();
 
   useEffect(() => {
     loadEvents().then((ev) => setSummary(summarize(ev)));
@@ -45,18 +48,22 @@ function TestSection({ enabled, onToggle }: { enabled: boolean; onToggle: (v: bo
   }, [reload]);
 
   async function exportLog() {
-    await saveJson(`ijeongpyo-usage-${day(new Date().toISOString())}.json`, exportPayload(await loadEvents()));
+    if (await saveJson(`ijeongpyo-usage-${day(new Date().toISOString())}.json`, exportPayload(await loadEvents()))) {
+      toast("사용 기록을 내보냈어요");
+    }
   }
 
   async function clearLog() {
-    if (!confirm("사용 기록을 모두 지울까요? 길과 사진은 지워지지 않아요.")) return;
+    const ok = await ask({ title: "사용 기록을 지울까요?", body: "길과 사진은 지워지지 않아요.", ok: "지우기", danger: true });
+    if (!ok) return;
     await clearEvents();
     setReload((n) => n + 1);
+    toast("사용 기록을 지웠어요");
   }
 
   // 평가 도구(npm run eval)에 넣을 카드 글. 사진은 넣지 않는다.
   async function exportRoute(r: Route) {
-    await saveJson(`route-${r.cards.length}cards-${r.id.slice(0, 6)}.json`, {
+    const ok = await saveJson(`route-${r.cards.length}cards-${r.id.slice(0, 6)}.json`, {
       name: r.name,
       exportedAt: new Date().toISOString(),
       cards: r.cards.map((c) => ({
@@ -66,19 +73,21 @@ function TestSection({ enabled, onToggle }: { enabled: boolean; onToggle: (v: bo
         instruction: c.instruction,
       })),
     });
+    if (ok) toast(`'${r.name}' 카드 글을 내보냈어요`);
   }
 
   const rows: [string, string | number][] = summary
     ? [
         ["기록 기간", `${day(summary.firstAt)} ~ ${day(summary.lastAt)}`],
         ["걷기 시작", summary.walks],
-        ["마지막 카드까지 간 횟수", summary.finished],
+        ["도착까지 걸은 횟수", summary.finished],
         ["카드를 손으로 넘긴 횟수", summary.manualNext],
         ["길 벗어남 알림", summary.offRoute],
         ["'길을 잃었어요' 누른 횟수", summary.lostOpen],
         ["사진으로 찾은 횟수", summary.lostFound],
         ["3번 찍어도 못 찾은 횟수", summary.lostGaveUp],
         ["찾을 때까지 찍은 사진(평균)", summary.avgPhotosToFind ?? "-"],
+        ["길잡이를 바꾼 횟수", summary.landmarkReplaced],
         ["보호자에게 위치 보낸 횟수", summary.guardianShare],
       ]
     : [];
@@ -121,9 +130,89 @@ function TestSection({ enabled, onToggle }: { enabled: boolean; onToggle: (v: bo
           </button>
         ))}
       </div>
+      {dialog}
     </>
   );
 }
+
+// 휴대폰을 바꿔도 길이 사라지지 않게: 길과 사진을 파일 하나로 내보내고 다시 불러온다
+function BackupSection() {
+  const [busy, setBusy] = useState<"save" | "load" | null>(null);
+  const [dialog, ask] = useConfirm();
+
+  async function backup() {
+    setBusy("save");
+    try {
+      const data = await makeBackup();
+      if (data.routes.length === 0) {
+        toast("아직 저장한 길이 없어요");
+        return;
+      }
+      const ok = await saveJson(`ijeongpyo-backup-${day(new Date().toISOString())}.json`, data);
+      if (ok) toast(`길 ${data.routes.length}개를 백업했어요`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function restore(file: File) {
+    const ok = await ask({
+      title: "백업을 불러올까요?",
+      body: "백업에 있는 길을 이 휴대폰에 넣어요. 같은 길이 이미 있으면 백업 내용으로 바뀌어요.",
+      ok: "불러오기",
+    });
+    if (!ok) return;
+    setBusy("load");
+    try {
+      const { added, replaced } = await restoreBackup(file);
+      toast(`길 ${added}개를 새로 넣고 ${replaced}개를 바꿨어요`);
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <>
+      <p className="section-label label-large">백업</p>
+      <Row
+        title="길 백업하기"
+        desc="휴대폰을 바꾸거나 브라우저 기록을 지우면 길이 사라져요. 가끔 백업해서 안전한 곳에 두세요."
+      />
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 16px 12px" }}>
+        <div className="row">
+          <button className="btn btn-tonal" onClick={backup} disabled={busy !== null}>
+            <Icon name="download" size={20} /> {busy === "save" ? "묶는 중…" : "백업하기"}
+          </button>
+          <label className={`btn btn-outlined${busy ? " disabled" : ""}`} htmlFor="restore-file" aria-disabled={busy !== null}>
+            <Icon name="upload" size={20} /> {busy === "load" ? "불러오는 중…" : "불러오기"}
+          </label>
+          <input
+            id="restore-file"
+            className="hidden-input"
+            type="file"
+            accept="application/json,.json"
+            disabled={busy !== null}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) restore(f);
+            }}
+          />
+        </div>
+        <p className="label-medium muted">백업 파일에는 사진과 다닌 길이 들어 있어요. 다른 사람에게 보내지 마세요.</p>
+      </div>
+      {dialog}
+    </>
+  );
+}
+
+const THEMES: { value: Theme; label: string; icon: "phone" | "light" | "dark" }[] = [
+  { value: "auto", label: "휴대폰대로", icon: "phone" },
+  { value: "light", label: "밝게", icon: "light" },
+  { value: "dark", label: "어둡게", icon: "dark" },
+];
 
 export default function SettingsPage() {
   const s = useSettings();
@@ -132,7 +221,6 @@ export default function SettingsPage() {
   const set = (patch: Partial<Settings>) => {
     const next = { ...s, ...patch };
     saveSettings(next);
-    if ("largeText" in patch) document.documentElement.dataset.large = String(next.largeText);
   };
 
   return (
@@ -160,10 +248,19 @@ export default function SettingsPage() {
         )}
 
         <p className="section-label label-large">보기</p>
+        <Row title="화면 밝기" desc="밤에 걸을 때는 어두운 화면이 눈이 덜 부셔요" />
+        <div className="seg" role="group" aria-label="화면 밝기">
+          {THEMES.map((t) => (
+            <button key={t.value} aria-pressed={s.theme === t.value} onClick={() => set({ theme: t.value })}>
+              {s.theme === t.value ? <Icon name="check" size={18} /> : <Icon name={t.icon} size={18} />} {t.label}
+            </button>
+          ))}
+        </div>
         <Row title="글씨 크게" desc="모든 화면의 글씨를 조금 크게 보여 줘요">
           <Switch label="글씨 크게" checked={s.largeText} onChange={(v) => set({ largeText: v })} />
         </Row>
 
+        <BackupSection />
         <TestSection enabled={s.usageLog} onToggle={(v) => set({ usageLog: v })} />
 
         <div style={{ padding: "16px 16px 0" }}>

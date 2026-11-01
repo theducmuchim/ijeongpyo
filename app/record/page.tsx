@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { AppBar, CameraInput, Icon, PhotoView } from "@/components/ui";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { AiWaiting, AppBar, CameraInput, Icon, PhotoView } from "@/components/ui";
 import { requestCards } from "@/lib/api";
 import { db, getPhoto, newId, savePhoto } from "@/lib/db";
 import { blobToPayload, shrinkPhoto } from "@/lib/image";
 import { saveSettings, useSettings } from "@/lib/settings";
+import { toast } from "@/lib/toast";
 import type { Card, Junction, Route } from "@/types";
 
 const MAX_JUNCTIONS = 20;
@@ -26,15 +27,33 @@ function makeRecognizer(): SpeechRec | null {
   return Ctor ? new Ctor() : null;
 }
 
+// 도착 화면에서 '돌아오는 길도 등록하기'를 누르면 이름을 미리 채워 둔다
+let prefillCache: string | null = null;
+function readPrefill() {
+  if (prefillCache === null) {
+    try {
+      prefillCache = sessionStorage.getItem("ijeongpyo.prefillName") ?? "";
+      sessionStorage.removeItem("ijeongpyo.prefillName");
+    } catch {
+      prefillCache = "";
+    }
+  }
+  return prefillCache;
+}
+const noSubscribe = () => () => {};
+
 export default function RecordPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const prefill = useSyncExternalStore(noSubscribe, readPrefill, () => "");
+  const [typed, setName] = useState<string | null>(null);
+  const name = typed ?? prefill;
   const [started, setStarted] = useState(false);
   const [junctions, setJunctions] = useState<Junction[]>([]);
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [listening, setListening] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [aiWorking, setAiWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const settings = useSettings();
   const showNotice = settings ? !settings.seenPhotoNotice : false;
@@ -45,6 +64,7 @@ export default function RecordPage() {
   useEffect(() => {
     return () => {
       if (watchId.current !== null) navigator.geolocation?.clearWatch(watchId.current);
+      prefillCache = null; // 다음에 들어올 때는 미리 채운 이름을 다시 쓰지 않는다
     };
   }, []);
 
@@ -99,13 +119,14 @@ export default function RecordPage() {
     ]);
     setPendingPhoto(null);
     setNote("");
+    if ("vibrate" in navigator) navigator.vibrate(30); // 남긴 갈림길은 아래 사진 줄에 바로 나타난다
   }
 
   async function finish() {
     if (junctions.length === 0) return setError("갈림길을 한 곳 이상 남겨 주세요");
     if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
     setError(null);
-    setBusy("AI가 카드를 정리하는 중…");
+    setAiWorking(true);
     const routeId = newId();
     let cards: Card[];
     try {
@@ -128,7 +149,7 @@ export default function RecordPage() {
       }));
     } catch (e) {
       // AI가 안 될 때도 등록이 끊기지 않게, 메모로 카드를 만들고 확인 화면에서 고치게 한다.
-      setError(`${(e as Error).message} 메모로 카드를 만들었어요. 확인 화면에서 고쳐 주세요.`);
+      toast(`${(e as Error).message} 메모로 카드를 만들었으니 확인 화면에서 고쳐 주세요.`);
       cards = junctions.map((j, i) => ({
         id: newId(),
         order: i + 1,
@@ -152,7 +173,6 @@ export default function RecordPage() {
       status: "draft",
     };
     await db.routes.put(route);
-    setBusy(null);
     router.push(`/review/${routeId}`);
   }
 
@@ -200,24 +220,72 @@ export default function RecordPage() {
     );
   }
 
+  if (aiWorking) {
+    return (
+      <main className="screen">
+        <AppBar title={`새 길 등록 · ${name}`} />
+        <div className="body">
+          <AiWaiting
+            title="AI가 길 안내 카드를 만들고 있어요"
+            hint="보통 10~30초 걸려요. 화면을 끄지 말고 기다려 주세요."
+            photoId={junctions.at(-1)?.photoId}
+            steps={[
+              `갈림길 사진 ${junctions.length}장 보내는 중`,
+              "오래 남는 간판과 건물 찾는 중",
+              "갈림길마다 길잡이 고르는 중",
+              "안내 문장 다듬는 중",
+            ]}
+          />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="screen">
       <AppBar title={`새 길 등록 · ${name}`} back="/" />
       <div className="body">
         <CameraInput id="junction-photo" onPick={onPhoto} />
-        <label htmlFor="junction-photo" className="camera" style={{ cursor: "pointer" }}>
+        <label htmlFor="junction-photo" className={`camera${pendingPhoto ? " has-photo" : ""}`}>
           {pendingPhoto ? (
             <PhotoView photoId={pendingPhoto} height={300} caption="방금 찍은 사진" />
           ) : (
-            <span style={{ display: "grid", gap: 8, placeItems: "center" }}>
-              <Icon name="camera" size={40} />
+            <span style={{ display: "grid", gap: 12, placeItems: "center" }}>
+              <span className="cam-icon">
+                <Icon name="camera" size={36} />
+              </span>
               <span className="body-large">눌러서 갈림길 사진 찍기</span>
               <span className="body-medium">간판이 보이게, 사람이 적은 쪽을 찍어 주세요</span>
             </span>
           )}
         </label>
 
-        <p className="chip label-large">지금까지 갈림길 {junctions.length}곳</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <p className="chip label-large">갈림길 {junctions.length}곳</p>
+          {pendingPhoto && (
+            <label htmlFor="junction-photo" className="btn btn-text label-large">
+              <Icon name="refresh" size={18} /> 다시 찍기
+            </label>
+          )}
+        </div>
+        {junctions.length > 0 && (
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }} aria-label="지금까지 남긴 갈림길">
+            {junctions.map((j, i) => (
+              <div key={j.photoId} style={{ position: "relative" }} className="pop">
+                <PhotoView photoId={j.photoId} thumb caption={`${i + 1}번째 갈림길`} />
+                <span
+                  className="label-medium"
+                  style={{
+                    position: "absolute", left: 4, top: 4, minWidth: 22, height: 22, borderRadius: 11,
+                    background: "var(--primary)", color: "var(--on-primary)", display: "grid", placeItems: "center",
+                  }}
+                >
+                  {i + 1}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="list-row">
           <button className="icon-btn" onClick={listen} aria-label="음성으로 메모하기" disabled={listening}>

@@ -34,3 +34,21 @@ export const WHERE_AM_I_PROMPT = `너는 익숙한 길에서도 자주 길을 �
 아래 모양의 JSON만 출력한다. 다른 말은 쓰지 않는다.
 {"status":"on_route|off_route|unsure","confidence":0.0,"seenLandmarks":[],
  "matchedCardOrder":null,"nextStep":"","askPhoto":null,"reasonForUser":""}`;
+
+// 2차: 길잡이가 없어졌을 때 새 사진으로 카드 한 장을 고친다 (설계서 5장 replace-landmark)
+export const REPLACE_LANDMARK_PROMPT = `너는 익숙한 길에서도 자주 길을 잃는 사람을 위한 길 안내 카드를 고친다.
+원래 카드의 길잡이가 없어졌거나 모습이 바뀌었다. 같은 갈림길에서 새로 찍은 사진 한 장과 원래 카드 내용을 받는다.
+걷는 길과 꺾는 방향은 그대로다.
+
+1. 새 사진을 한두 문장으로 설명한다. 나중에 사진 없이 이 설명만 읽고도 같은 장소인지 알 수 있게,
+   간판 글자, 색, 건물 모양처럼 오래 남는 특징을 적는다.
+2. 새 사진에서 길잡이를 하나 고른다. 원래 길잡이가 아직 보이면 그대로 써도 된다.
+   포스터, 현수막, 자동차, 자전거, 사람, 화분처럼 옮겨지거나 사라질 것은 고르지 않는다.
+3. 길잡이가 걷는 사람 기준 어느 쪽인지(left/right/ahead) 정한다.
+4. 원래 카드의 행동(action)에 맞게 화면에 보일 안내 문장을 25자 안팎으로 새로 쓴다.
+   예: "빵집을 오른쪽에 두고 골목으로 들어가세요". 동서남북과 거리 숫자는 쓰지 않는다.
+5. 무엇이 바뀌었는지 사용자에게 한 문장으로 알려 준다(changeNote). 예: "꽃집 자리에 빵집이 생겨서 빵집으로 바꿨어요"
+6. 사진이 흔들렸거나 쓸 만한 길잡이가 안 보이면 warning에 이유를 쓴다. 문제없으면 null.
+
+아래 모양의 JSON만 출력한다. 다른 말은 쓰지 않는다.
+{"photoDescription":"","landmark":{"name":"","side":"right"},"instruction":"","changeNote":"","warning":null}`;

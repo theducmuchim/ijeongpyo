@@ -19,7 +19,7 @@ export function logEvent(routeId: string, type: UsageEventType, detail?: number)
 
 export type UsageSummary = {
   walks: number; // 걷기 시작
-  finished: number; // 마지막 카드까지 감
+  finished: number; // '도착했어요'까지 누름
   manualNext: number; // 손으로 넘긴 횟수
   offRoute: number; // 길 벗어남 알림
   lostOpen: number; // '길을 잃었어요' 누름
@@ -27,6 +27,7 @@ export type UsageSummary = {
   lostGaveUp: number; // 3번 찍어도 못 찾음
   avgPhotosToFind: number | null; // 찾을 때까지 평균 몇 장 찍었나
   guardianShare: number;
+  landmarkReplaced: number; // 길잡이를 바꾼 횟수
   firstAt: string | null;
   lastAt: string | null;
 };
@@ -46,6 +47,7 @@ export function summarize(events: UsageEvent[]): UsageSummary {
       ? Math.round((found.reduce((s, e) => s + (e.detail ?? 0), 0) / found.length) * 10) / 10
       : null,
     guardianShare: count("guardian_share"),
+    landmarkReplaced: count("landmark_replaced"),
     firstAt: events[0]?.at ?? null,
     lastAt: events.at(-1)?.at ?? null,
   };

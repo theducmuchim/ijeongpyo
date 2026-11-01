@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AppBar, Icon, IconLink } from "@/components/ui";
+import { AppBar, EmptySignpost, Icon, IconLink, SkeletonList } from "@/components/ui";
 import { db } from "@/lib/db";
 import type { Route } from "@/types";
 
@@ -26,19 +26,20 @@ export default function Home() {
     <main className="screen">
       <AppBar title="이정표" leadingIcon="walk" trailing={<IconLink href="/settings" icon="settings" label="설정" />} />
       <div className="body">
-        <p className="label-large muted">
-          {routes === null ? "불러오는 중…" : `저장한 길 ${routes.length}개`}
-        </p>
+        {routes === null && <SkeletonList rows={2} />}
+        {routes && routes.length > 0 && <p className="label-large muted">저장한 길 {routes.length}개</p>}
 
         {routes?.length === 0 && (
-          <div className="surface-card">
-            <p className="title-medium">아직 저장한 길이 없어요</p>
+          <div className="empty">
+            <EmptySignpost />
+            <p className="title-large">아직 저장한 길이 없어요</p>
             <p className="body-medium muted">
               자주 다니는 길을 가족이나 친구와 한 번 같이 걸으며 등록해 보세요. 갈림길마다 사진과 메모만 남기면 돼요.
             </p>
           </div>
         )}
 
+        <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {routes?.map((r) => (
           <Link
             key={r.id}
@@ -57,6 +58,7 @@ export default function Home() {
             <Icon name="forward" />
           </Link>
         ))}
+        </div>
 
         <div className="surface-card tonal-card">
           <p className="title-medium">자주 길을 잃나요?</p>

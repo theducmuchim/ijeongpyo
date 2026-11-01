@@ -69,7 +69,8 @@ export type UsageEventType =
   | "lost_photo" // 길을 잃었을 때 사진을 찍어 보냈다 (detail: 몇 번째 사진인지)
   | "lost_found" // AI가 확실하게 답했다 (detail: 그때까지 찍은 사진 수)
   | "lost_gave_up" // 3번 찍어도 못 찾았다
-  | "guardian_share"; // 보호자에게 위치 보내기를 눌렀다
+  | "guardian_share" // 보호자에게 위치 보내기를 눌렀다
+  | "landmark_replaced"; // 길잡이를 새 사진으로 바꿨다
 
 export type UsageEvent = {
   id?: number;
@@ -77,4 +78,14 @@ export type UsageEvent = {
   routeId: string;
   type: UsageEventType;
   detail?: number;
+};
+
+// 길잡이 바꾸기 API의 답
+export type ReplaceResult = {
+  photoDescription: string;
+  landmark: { name: string; side: Side };
+  instruction: string;
+  changeNote: string;
+  warning: string | null;
+  mock?: boolean;
 };
