@@ -1,36 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 이정표
 
-## Getting Started
+매일 다니는 길에서도 방향을 잃는 사람(DTD, 발달성 지형적 방향감각 상실증)을 위한 길 안내 웹앱입니다.
+지도를 보여 주는 대신 "꽃집을 오른쪽에 두고 골목으로 들어가세요"처럼 눈에 보이는 길잡이로 안내합니다.
 
-First, run the development server:
+- **길 등록**: 보호자와 같이 한 번 걸으면서 갈림길마다 사진 한 장과 메모를 남깁니다. 다 걷고 나면 AI(구글 Gemini)가 한 번에 안내 카드로 정리합니다.
+- **혼자 걷기**: 카드를 한 장씩 보며 걷습니다. GPS가 잡히면 다음 카드로 자동으로 넘어가고, 안 잡히면 손으로 넘깁니다.
+- **길을 잃었어요**: 주변 사진을 찍으면 AI가 등록해 둔 카드와 비교해서 어디쯤인지, 다음에 뭘 하면 되는지 알려 줍니다. 확실하지 않으면 사진을 더 찍어 달라고 하고, 그래도 모르면 마지막으로 지나간 장소 사진을 보여 줍니다.
+
+수익을 내려는 앱이 아닙니다.
+
+---
+
+## 1. 내 컴퓨터에서 켜 보기
+
+Node.js 20 이상이 필요합니다.
 
 ```bash
+npm install
+cp .env.example .env.local   # 키를 넣을 파일 만들기
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+브라우저에서 http://localhost:3000 을 엽니다. 휴대폰처럼 보려면 개발자 도구에서 모바일 화면으로 바꾸세요.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 키 없이 먼저 눌러 보기 (시험 모드)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`.env.local`의 `GEMINI_API_KEY`를 비워 두면 시험 모드로 켜집니다. AI를 부르지 않고 미리 정해 둔 답을 돌려주며, 화면 위에 "시험 모드" 표시가 뜹니다. 화면 흐름을 확인할 때 쓰면 됩니다.
 
-## Learn More
+### 진짜 AI 연결하기
 
-To learn more about Next.js, take a look at the following resources:
+1. https://aistudio.google.com/apikey 에서 구글 계정으로 키를 만듭니다. (무료)
+2. `.env.local`의 `GEMINI_API_KEY=` 뒤에 붙여 넣습니다.
+3. `npm run dev`를 껐다가 다시 켭니다.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+키는 서버에서만 읽습니다. 휴대폰(브라우저)으로는 절대 보내지 않습니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 휴대폰으로 시험하기
 
-## Deploy on Vercel
+카메라와 GPS는 `https://` 주소에서만 제대로 동작합니다. 같은 와이파이에서 `http://내컴퓨터IP:3000`으로 열면 카메라가 막힐 수 있으니, 실제 휴대폰 시험은 아래처럼 Vercel에 올려서 하는 게 편합니다.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 2. 인터넷에 올리기 (Vercel, 무료)
+
+1. 이 폴더를 GitHub 저장소로 올립니다. (`.env.local`은 자동으로 빠집니다)
+2. https://vercel.com 에서 그 저장소를 가져옵니다(Import).
+3. Settings → Environment Variables에 `GEMINI_API_KEY`를 넣습니다. 나머지는 `.env.example`을 보고 필요하면 넣습니다.
+4. Deploy를 누르면 `https://...vercel.app` 주소가 생깁니다. 휴대폰에서 열고 "홈 화면에 추가"를 하면 앱처럼 쓸 수 있습니다.
+
+Vercel에 올리면 서버가 자주 새로 켜지기 때문에, 하루 사용 횟수를 정확히 세려면 Upstash Redis(무료)를 연결해 `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`을 넣어 주세요. 안 넣어도 앱은 돌아갑니다.
+
+---
+
+## 3. 꼭 알아 둘 것: 무료 Gemini를 쓸 때
+
+- **무료 한도는 사용자마다가 아니라 프로젝트 전체에 걸립니다.** 쓰는 사람이 늘면 다 같이 한도를 나눠 씁니다. 그래서 휴대폰 한 대가 하루에 AI를 부를 수 있는 횟수를 `DAILY_AI_LIMIT_PER_DEVICE`(기본 10번)로 막아 두었습니다. 한도를 넘으면 "오늘 사용량을 다 썼어요. 내일 다시 해 주세요."처럼 쉬운 말로 알려 줍니다.
+- **무료 요금제에서는 구글이 보낸 데이터를 서비스 개선에 쓰고 사람이 볼 수도 있습니다.** 그래서 앱이 처음 사진을 찍을 때와 설정 화면에서 "얼굴, 집 주소, 문패가 나오지 않게 찍어 주세요"라고 안내합니다.
+- 사진은 보내기 전에 1024px로 줄이고, 사진 속 위치 정보(EXIF)는 지워서 보냅니다.
+- 사진, 카드, 다닌 길, 보호자 번호는 모두 그 휴대폰 안(IndexedDB, localStorage)에만 저장됩니다. 서버에는 아무것도 남기지 않습니다.
+- AI가 답을 이상한 모양으로 주면 한 번 더 묻고, 그래도 안 되면 AI 없이 할 수 있는 방법(메모로 카드 만들기, 사진 더 찍기)으로 넘어갑니다. AI가 멈춰도 앱이 멈추지 않게 했습니다.
+
+---
+
+## 4. 파일이 하는 일
+
+| 파일 | 하는 일 | 설계서 장 |
+|---|---|---|
+| `app/page.tsx` | 홈. 등록한 길 목록 | 8장 |
+| `app/record/page.tsx` | 길 등록. 사진, 메모, GPS 기록 | 6장, 8장 |
+| `app/review/[routeId]/page.tsx` | AI가 만든 카드 확인하고 고치기 | 8장 |
+| `app/walk/[routeId]/page.tsx` | 카드 보며 걷기, 자동 넘김, 길 벗어남 알림 | 6장, 8장 |
+| `app/lost/[routeId]/page.tsx` | 길을 잃었어요. 사진으로 위치 찾기, 보호자에게 위치 보내기 | 6장, 8장 |
+| `app/settings/page.tsx` | 진동, 음성, 보호자, 큰 글씨, 시험 기간 기록 | 8장, 11장 |
+| `app/about/page.tsx` | DTD 설명 | 8장 |
+| `app/api/cards-from-walk/route.ts` | 사진+메모 → 안내 카드 (AI 1번 호출) | 5장, 7장 |
+| `app/api/where-am-i/route.ts` | 주변 사진 → 지금 위치 추정 (AI 1번 호출) | 5장, 7장 |
+| `lib/ai.ts` | Gemini 부르기, 시험 모드 | 7장 |
+| `lib/whereAmI.ts` | 위치 묻기. 앱 서버와 평가 도구가 같이 씀 | 7장 |
+| `lib/prompts.ts` | AI에게 주는 지시문 | 7장 |
+| `lib/schemas.ts` | AI 답이 맞는 모양인지 검사 | 7장 |
+| `lib/rateLimit.ts` | 하루 사용 횟수 제한 | 9장 |
+| `lib/db.ts` | 휴대폰 안 저장소 (Dexie) | 4장, 9장 |
+| `lib/image.ts` | 사진 줄이기, 위치 정보 지우기 | 9장 |
+| `lib/geo.ts` | 거리 계산, 자동 넘김(30m), 길 벗어남(50m, 20초) 기준 | 6장 |
+| `lib/usageLog.ts` | 시험 기간 사용 기록 (휴대폰 안에만) | 11장 |
+| `scripts/eval.ts`, `eval/` | AI 평가 도구 (`npm run eval`) | 11장 |
+
+숫자 기준(30m, 50m, 하루 10번 등)은 실제로 걸어 보면서 바꾸면 됩니다. 대부분 `lib/geo.ts`와 `.env.local`에 모여 있습니다.
+
+---
+
+## 5. 시험 기간에 쓰는 것
+
+**사용 기록.** 설정 → 시험 기간에서 볼 수 있습니다. '길을 잃었어요'를 몇 번 눌렀는지, 찾을 때까지 사진을 몇 장 찍었는지 같은 횟수만 휴대폰 안에 남깁니다. 사진, 위치, 길 이름은 남기지 않습니다. 시험이 끝나면 본인이 동의 칸에 체크하고 '기록 내보내기'를 눌러 파일로 받습니다.
+
+**AI 평가.** 지시문을 고칠 때마다 같은 사진 30장으로 정답률을 다시 잽니다. 하는 법은 [`eval/README.md`](eval/README.md)에 있습니다.
+
+```bash
+npm run eval              # 정답표 전체
+npm run eval -- --limit 3 # 앞의 3건만
+```
+
+---
+
+## 6. 다음에 할 일
+
+- 실제 길 2~3개를 등록해서 걸어 보기 (지상 골목, 지하상가, 지하철 환승)
+- 등록한 길에서 평가 사진 30장을 찍고 `npm run eval`로 첫 점수 재기
+- 걸으면서 AI 카드 문장이 헷갈렸던 곳, 자동 넘김이 너무 빠르거나 늦었던 곳 적어 두기
+- 그 기록을 보고 `lib/prompts.ts`의 지시문과 `lib/geo.ts`의 숫자 고치기
+
+이 앱은 진단을 하지 않습니다. 길을 건널 때는 항상 신호를 직접 확인하세요.

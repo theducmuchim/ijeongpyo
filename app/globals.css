@@ -1,49 +1,267 @@
+/* Material 3 기본 색 체계(피그마 시안과 같은 색 역할 이름) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --primary: #6750a4;
+  --on-primary: #ffffff;
+  --primary-container: #eaddff;
+  --on-primary-container: #21005d;
+  --secondary-container: #e8def8;
+  --on-secondary-container: #1d192b;
+  --tertiary-container: #ffd8e4;
+  --on-tertiary-container: #31111d;
+  --surface: #fef7ff;
+  --surface-container-low: #f7f2fa;
+  --surface-container-highest: #e6e0e9;
+  --on-surface: #1d1b20;
+  --on-surface-variant: #49454f;
+  --outline: #79747e;
+  --outline-variant: #cac4d0;
+  --inverse-surface: #322f35;
+  --inverse-on-surface: #f5eff7;
+  --scale: 1;
+  color-scheme: light;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  height: 100%;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+:root[data-large="true"] {
+  --scale: 1.12;
 }
 
 * {
   box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
-
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  color: var(--on-surface);
+  font-family: "Noto Sans KR", system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
 a {
   color: inherit;
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+/* 휴대폰 한 화면 폭으로 고정 */
+.screen {
+  max-width: 480px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  position: relative;
 }
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 16px 24px;
+}
+.grow {
+  flex: 1;
+}
+
+/* M3 타입 스케일 (한글) */
+.headline-small { font-size: calc(24px * var(--scale)); line-height: 1.33; font-weight: 400; margin: 0; }
+.title-large { font-size: calc(22px * var(--scale)); line-height: 1.27; font-weight: 400; margin: 0; }
+.title-medium { font-size: calc(16px * var(--scale)); line-height: 1.5; font-weight: 500; margin: 0; }
+.body-large { font-size: calc(16px * var(--scale)); line-height: 1.5; margin: 0; }
+.body-medium { font-size: calc(14px * var(--scale)); line-height: 1.43; margin: 0; }
+.label-large { font-size: calc(14px * var(--scale)); line-height: 1.43; font-weight: 500; margin: 0; }
+.label-medium { font-size: calc(12px * var(--scale)); line-height: 1.33; font-weight: 500; margin: 0; }
+.guide { font-size: calc(28px * var(--scale)); line-height: 1.29; font-weight: 700; margin: 0; word-break: keep-all; }
+.muted { color: var(--on-surface-variant); }
+.primary-text { color: var(--primary); }
+
+/* 앱바 */
+.appbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 64px;
+  padding: 0 4px;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 2;
+}
+.appbar h1 {
+  flex: 1;
+  font-size: 22px;
+  font-weight: 400;
+  margin: 0 0 0 8px;
+}
+.icon-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  border: none;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--on-surface-variant);
+}
+.icon-btn:active {
+  background: rgba(29, 27, 32, 0.1);
+}
+
+/* 버튼 */
+.btn {
+  border: none;
+  border-radius: 999px;
+  min-height: 48px;
+  padding: 0 24px;
+  font-size: calc(16px * var(--scale));
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+.btn:disabled { opacity: 0.38; cursor: default; }
+.btn-large { min-height: 72px; font-size: calc(22px * var(--scale)); }
+.btn-filled { background: var(--primary); color: var(--on-primary); }
+.btn-tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn-outlined { background: transparent; color: var(--on-surface-variant); border: 1px solid var(--outline-variant); }
+.btn-text { background: transparent; color: var(--primary); width: auto; padding: 0 12px; }
+.row { display: flex; gap: 12px; }
+.row > * { flex: 1; }
+
+/* 카드·면 */
+.surface-card {
+  background: var(--surface-container-low);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tonal-card { background: var(--secondary-container); color: var(--on-secondary-container); }
+.warn-card { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+.result-card {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  border-radius: 24px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chip {
+  align-self: flex-start;
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  border-radius: 8px;
+  padding: 6px 16px;
+}
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--surface-container-low);
+}
+.list-row .text { flex: 1; min-width: 0; }
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+/* 사진 자리 */
+.photo {
+  width: 100%;
+  border-radius: 24px;
+  background: var(--surface-container-highest);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  color: var(--on-surface-variant);
+}
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo.thumb { width: 72px; height: 72px; border-radius: 12px; flex: none; }
+.camera {
+  border-radius: 24px;
+  background: var(--inverse-surface);
+  color: var(--inverse-on-surface);
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 24px;
+  overflow: hidden;
+}
+.camera img { width: 100%; border-radius: 16px; }
+
+/* 진행 막대 */
+.progress { display: flex; align-items: center; gap: 12px; }
+.progress .track { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-container-highest); overflow: hidden; }
+.progress .fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width 0.3s; }
+
+/* 스위치 */
+.setting-row { display: flex; align-items: center; gap: 16px; padding: 12px 16px; }
+.setting-row .text { flex: 1; }
+.switch { position: relative; width: 52px; height: 32px; flex: none; }
+.switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.switch span {
+  position: absolute; inset: 0; border-radius: 16px; cursor: pointer;
+  background: var(--surface-container-highest); border: 2px solid var(--outline); transition: 0.2s;
+}
+.switch span::after {
+  content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%;
+  left: 6px; top: 6px; background: var(--outline); transition: 0.2s;
+}
+.switch input:checked + span { background: var(--primary); border-color: var(--primary); }
+.switch input:checked + span::after { width: 24px; height: 24px; left: 22px; top: 2px; background: var(--on-primary); }
+.section-label { padding: 16px 16px 4px; color: var(--primary); }
+
+.fab {
+  position: fixed;
+  bottom: 32px;
+  right: max(16px, calc(50vw - 240px + 16px));
+  height: 80px;
+  border-radius: 20px;
+  padding: 0 28px;
+  border: none;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font-size: 22px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+.field {
+  width: 100%;
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: transparent;
+  font-size: 16px;
+}
+textarea.field { resize: vertical; min-height: 64px; }
+.banner {
+  background: var(--inverse-surface);
+  color: var(--inverse-on-surface);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+.hidden-input { display: none; }

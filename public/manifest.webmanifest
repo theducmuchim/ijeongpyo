@@ -1,0 +1,11 @@
+{
+  "name": "이정표",
+  "short_name": "이정표",
+  "description": "익숙한 길에서도 길을 잃는 사람을 위한 랜드마크 길안내",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fef7ff",
+  "theme_color": "#fef7ff",
+  "lang": "ko",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
