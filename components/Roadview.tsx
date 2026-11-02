@@ -44,7 +44,7 @@ function loadSdk(): Promise<void> {
 }
 
 type State = "loading" | "ok" | "none" | "error";
-const TIMEOUT_MS = 12000;
+const TIMEOUT_MS = 20000; // 지도 파일과 지점 찾기까지 (사진이 채워지는 시간은 빼고)
 
 export function Roadview({ lat, lng, heading }: { lat: number; lng: number; heading?: number }) {
   const box = useRef<HTMLDivElement>(null);
@@ -74,22 +74,30 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
             clearTimeout(timer);
             return setState("none");
           }
-          k.event.addListener(rv, "init", () => {
-            clearTimeout(timer);
-            if (heading !== undefined) {
-              try {
-                rv.setViewpoint({ pan: heading, tilt: 0, zoom: 0 });
-              } catch {
-                // 시점을 못 돌려도 로드뷰는 그대로 보인다
-              }
-            }
-            if (alive) setState("ok");
-          });
+          // 카카오 로드뷰는 'init' 신호를 보내지 않는 일이 있어(실제로 확인), 신호를 기다리지 않는다.
+          // 지점을 찾으면 바로 로드뷰 칸을 보여 주고, 사진은 휴대폰 망에 따라 5~15초 뒤에 채워진다.
           try {
             rv.setPanoId(panoId, pos);
           } catch (e) {
             clearTimeout(timer);
-            fail(e);
+            return fail(e);
+          }
+          clearTimeout(timer);
+          setState("ok");
+          if (heading !== undefined) {
+            // 사진이 들어온 뒤에야 시점이 돌아가므로 몇 번 나눠서 맞춘다. 사용자가 직접 돌리기 시작하면 그만둔다.
+            let touched = false;
+            box.current?.addEventListener("pointerdown", () => (touched = true), { once: true });
+            for (const ms of [300, 2000, 5000, 9000]) {
+              setTimeout(() => {
+                if (!alive || touched) return;
+                try {
+                  rv.setViewpoint({ pan: heading, tilt: 0, zoom: 0 });
+                } catch {
+                  // 시점을 못 돌려도 로드뷰는 그대로 보인다
+                }
+              }, ms);
+            }
           }
         });
       })
@@ -119,7 +127,7 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
         </div>
       )}
       <p className="label-medium muted" style={{ marginTop: 6 }}>
-        로드뷰는 찍은 지 오래됐을 수 있어요. 가게가 바뀌었을 수도 있어요.
+        거리 사진이 뜨기까지 10초쯤 걸릴 수 있어요. 찍은 지 오래돼서 가게가 바뀌었을 수도 있어요.
       </p>
     </div>
   );
