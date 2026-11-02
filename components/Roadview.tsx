@@ -54,6 +54,7 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
   useEffect(() => {
     if (!KEY) return;
     let alive = true;
+    const cleanups: (() => void)[] = [];
     const fail = (e: unknown) => {
       if (!alive) return;
       const msg = String((e as Error)?.message ?? e);
@@ -84,21 +85,30 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
           }
           clearTimeout(timer);
           setState("ok");
-          if (heading !== undefined) {
-            // 사진이 들어온 뒤에야 시점이 돌아가므로 몇 번 나눠서 맞춘다. 사용자가 직접 돌리기 시작하면 그만둔다.
-            let touched = false;
-            box.current?.addEventListener("pointerdown", () => (touched = true), { once: true });
-            for (const ms of [300, 2000, 5000, 9000]) {
-              setTimeout(() => {
-                if (!alive || touched) return;
-                try {
-                  rv.setViewpoint({ pan: heading, tilt: 0, zoom: 0 });
-                } catch {
-                  // 시점을 못 돌려도 로드뷰는 그대로 보인다
-                }
-              }, ms);
-            }
+          // 사진이 다 들어와도 카카오 로드뷰가 스스로 다시 그리지 않아 회색으로 남는 일이 있었다(실제로 확인).
+          // 크기를 다시 재라고(relayout) 몇 번 알려 준다. 시점은 사용자가 직접 돌리기 전까지만 맞춘다.
+          let touched = false;
+          box.current?.addEventListener("pointerdown", () => (touched = true), { once: true });
+          for (const ms of [300, 1500, 3500, 6000, 9000, 13000, 18000]) {
+            setTimeout(() => {
+              if (!alive) return;
+              try {
+                rv.relayout();
+                if (heading !== undefined && !touched) rv.setViewpoint({ pan: heading, tilt: 0, zoom: 0 });
+              } catch {
+                // 다시 그리기나 시점 맞추기를 못 해도 로드뷰는 그대로 둔다
+              }
+            }, ms);
           }
+          const onResize = () => {
+            try {
+              rv.relayout();
+            } catch {
+              // 무시
+            }
+          };
+          window.addEventListener("resize", onResize);
+          cleanups.push(() => window.removeEventListener("resize", onResize));
         });
       })
       .catch((e) => {
@@ -108,6 +118,7 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
     return () => {
       alive = false;
       clearTimeout(timer);
+      cleanups.forEach((f) => f());
     };
   }, [lat, lng, heading]);
 
