@@ -20,7 +20,12 @@ export async function storesNear(lat: number, lng: number, radius = 40, rows = 8
   const url =
     `https://apis.data.go.kr/B553077/api/open/sdsc2/storeListInRadius?serviceKey=${keyParam()}` +
     `&pageNo=1&numOfRows=${rows}&radius=${radius}&cx=${lng}&cy=${lat}&type=json`;
-  const res = await fetch(url, { cache: "no-store" });
+  let res = await fetch(url, { cache: "no-store" });
+  // 공공데이터포털은 한꺼번에 여러 번 부르면 429를 준다. 잠깐 쉬었다가 한 번 더.
+  if (res.status === 429) {
+    await new Promise((r) => setTimeout(r, 700));
+    res = await fetch(url, { cache: "no-store" });
+  }
   const text = await res.text();
   if (!res.ok) throw new Error(`상가정보 오류 ${res.status}`);
   let j: Record<string, unknown>;

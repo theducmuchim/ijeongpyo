@@ -41,26 +41,29 @@ export async function POST(req: Request) {
     const points: TurnPoint[] = route.points.slice(-MAX_POINTS);
 
     // 2. 지점마다 주변 가게 (없으면 반경을 넓혀 한 번 더). 상가정보 키가 없으면 TMAP의 근처 장소 이름이라도 쓴다.
-    const nearby: NearStore[][] = await Promise.all(
-      points.map(async (p, i) => {
-        if (!hasStores()) {
-          if (!hasTmap()) return mockStoresNear(p.lat, p.lng, i);
-          return p.nearPoiName ? [{ name: p.nearPoiName, lat: p.lat, lng: p.lng, dist: 0 }] : [];
-        }
-        try {
-          let list = await storesNear(p.lat, p.lng, 40);
-          if (list.length === 0) list = await storesNear(p.lat, p.lng, 80);
-          const ranked = rankForLandmark(list, 6);
-          // TMAP이 그 지점 안내에 쓴 이름(예: "대전역 3번출구", "역전약국")은 실제로 보이는 것일 가능성이 높아 맨 앞에 둔다
-          const poi = p.action === "arrive" ? "" : p.nearPoiName;
-          if (poi && !ranked.some((s) => s.name === poi)) ranked.unshift({ name: poi, category: "지도 안내에 나오는 곳", lat: p.lat, lng: p.lng, dist: 0 });
-          return ranked;
-        } catch (e) {
-          console.error("[plan-route] 상가정보", String((e as Error).message).slice(0, 200));
-          return [];
-        }
-      }),
-    );
+    // 공공데이터포털이 한꺼번에 부르면 429를 주므로 3곳씩 나눠 부른다
+    const lookup = async (p: TurnPoint, i: number): Promise<NearStore[]> => {
+      if (!hasStores()) {
+        if (!hasTmap()) return mockStoresNear(p.lat, p.lng, i);
+        return p.nearPoiName ? [{ name: p.nearPoiName, lat: p.lat, lng: p.lng, dist: 0 }] : [];
+      }
+      let ranked: NearStore[] = [];
+      try {
+        let list = await storesNear(p.lat, p.lng, 40);
+        if (list.length === 0) list = await storesNear(p.lat, p.lng, 80);
+        ranked = rankForLandmark(list, 6);
+      } catch (e) {
+        console.error("[plan-route] 상가정보", String((e as Error).message).slice(0, 200));
+      }
+      // TMAP이 그 지점 안내에 쓴 이름(예: "대전역 3번출구", "역전약국")은 실제로 보이는 것일 가능성이 높아 맨 앞에 둔다
+      const poi = p.action === "arrive" ? "" : p.nearPoiName;
+      if (poi && !ranked.some((s) => s.name === poi)) ranked.unshift({ name: poi, category: "지도 안내에 나오는 곳", lat: p.lat, lng: p.lng, dist: 0 });
+      return ranked;
+    };
+    const nearby: NearStore[][] = [];
+    for (let k = 0; k < points.length; k += 3) {
+      nearby.push(...(await Promise.all(points.slice(k, k + 3).map((p, j) => lookup(p, k + j)))));
+    }
 
     // 3. AI가 길잡이를 고르고 문장을 쓴다. AI가 안 되면 가까운 1층 가게로 문장을 만든다.
     let picks: { candidates: string[]; instruction: string }[] | null = null;
