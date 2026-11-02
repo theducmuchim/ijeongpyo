@@ -76,8 +76,8 @@ async function callModelRaw(model: string, system: string, images: ImagePayload[
       systemInstruction: system, // lib/prompts.ts의 지시문
       responseMimeType: "application/json", // JSON으로만 답하게 함
       ...modelTuning(model),
-      // 무료 Flash는 몰릴 때 20초 가까이 붙잡고 있다가 실패한다(504). 8초 안에 안 오면 lite로 넘긴다.
-      httpOptions: { timeout: model === LITE_MODEL ? 20000 : 8000 },
+      // 무료 Flash는 몰릴 때 20초 가까이 붙잡고 있다가 실패한다(504). 10초(허용 최소값) 안에 안 오면 lite로 넘긴다.
+      httpOptions: { timeout: model === LITE_MODEL ? 20000 : 10000 },
     },
   });
   return res.text ?? "";
