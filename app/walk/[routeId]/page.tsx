@@ -25,7 +25,7 @@ import { clearLost, setResume, takeResume, wasLost } from "@/lib/resume";
 import { lastCardKey, loadSettings } from "@/lib/settings";
 import { toast } from "@/lib/toast";
 import { logEvent } from "@/lib/usageLog";
-import { type Command, speak, spokenDistance, stopSpeaking } from "@/lib/voice";
+import { type Command, prefetchSpeech, speak, spokenDistance, stopSpeaking } from "@/lib/voice";
 import type { Card, CheckResult, PracticeLevel, Route } from "@/types";
 
 const RETURN_SUFFIX = " 돌아오는 길";
@@ -409,6 +409,8 @@ export default function WalkPage() {
         }
       }
       setRoute(r ?? null);
+      // 카드 문장을 미리 받아 두면 걸을 때 AI 목소리가 바로 나온다
+      if (r) prefetchSpeech(r.cards.map((c) => c.instruction));
       // 건물 이름과 번지가 없는 카드는 위치로 채운다 (예전에 만든 길, 같이 걸으며 등록한 길)
       if (r)
         fillPlaces(r).then((u) => {

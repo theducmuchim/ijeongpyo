@@ -8,9 +8,9 @@ const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
 const memory = new Map<string, number>();
 
-const todayKey = (deviceId: string) => {
+const todayKey = (deviceId: string, kind: string) => {
   const d = new Date().toISOString().slice(0, 10);
-  return `ijeongpyo:${d}:${deviceId.slice(0, 64)}`;
+  return `ijeongpyo:${d}:${kind === "ai" ? "" : `${kind}:`}${deviceId.slice(0, 64)}`;
 };
 
 async function upstash(cmd: string[]): Promise<number> {
@@ -23,19 +23,20 @@ async function upstash(cmd: string[]): Promise<number> {
 }
 
 // 호출해도 되면 true. 한 번 부를 때마다 1씩 센다.
-export async function checkLimit(deviceId: string | null): Promise<boolean> {
+// kind로 따로 센다: ai(사진 AI, 기본 10번), voice(말 알아듣기), tts(목소리 만들기)
+export async function checkLimit(deviceId: string | null, kind = "ai", limit = DAILY_LIMIT): Promise<boolean> {
   if (!deviceId) return false;
-  const key = todayKey(deviceId);
+  const key = todayKey(deviceId, kind);
   if (UPSTASH_URL && UPSTASH_TOKEN) {
     try {
       const count = await upstash(["incr", key]);
       if (count === 1) await upstash(["expire", key, "90000"]);
-      return count <= DAILY_LIMIT;
+      return count <= limit;
     } catch {
       // 저장소에 문제가 있으면 메모리로 센다
     }
   }
   const count = (memory.get(key) ?? 0) + 1;
   memory.set(key, count);
-  return count <= DAILY_LIMIT;
+  return count <= limit;
 }

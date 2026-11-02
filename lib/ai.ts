@@ -113,7 +113,7 @@ export async function synthesize(text: string, voice = TTS_VOICE): Promise<{ pcm
     try {
       const res = await getClient().models.generateContent({
         model,
-        contents: [{ role: "user", parts: [{ text: `차분하고 또박또박, 길 안내처럼 읽어 주세요: ${text}` }] }],
+        contents: [{ role: "user", parts: [{ text }] }], // 꾸밈 지시를 붙이면 lite 모델이 그 지시까지 소리 내어 읽는다
         config: {
           responseModalities: ["AUDIO"],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },

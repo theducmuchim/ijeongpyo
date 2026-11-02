@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
 import { toast } from "@/lib/toast";
-import { type Command, canListen, listenAlways, listenOnce, matchCommand, speak } from "@/lib/voice";
+import { type Command, canListen, canListenAlways, finishListening, listenAlways, listenOnce, matchCommand, speak } from "@/lib/voice";
 
 type Props = {
   commands: Command[];
@@ -21,7 +21,7 @@ type Props = {
 /** 화면마다 붙이는 '말로 하기' 버튼. 설정에 따라 버튼을 누를 때만 듣거나, 계속 듣는다. */
 export function VoiceControl({ commands, onCommand, onOther, allowAlways, examples, label = "말로 하기" }: Props) {
   const s = useSettings();
-  const [state, setState] = useState<"idle" | "listening" | "on" | "off" | "denied">("idle");
+  const [state, setState] = useState<"idle" | "listening" | "thinking" | "on" | "off" | "denied">("idle");
   const [heard, setHeard] = useState<string | null>(null);
   // 계속 듣는 동안 화면이 바뀌어도 최신 명령 목록으로 맞추게 ref에 둔다
   const latest = useRef({ commands, onCommand, onOther, examples });
@@ -29,7 +29,9 @@ export function VoiceControl({ commands, onCommand, onOther, allowAlways, exampl
     latest.current = { commands, onCommand, onOther, examples };
   });
   const [paused, setPaused] = useState(false);
-  const always = !!allowAlways && s?.listenMode === "always" && !paused;
+  // 계속 듣기는 브라우저 음성 인식이 될 때만. 안 되는 브라우저(아이폰·아이패드의 크롬 등)는 버튼으로 듣는다.
+  const wantsAlways = !!allowAlways && s?.listenMode === "always" && canListenAlways();
+  const always = wantsAlways && !paused;
 
   function handle(alts: string[], fromAlways: boolean) {
     const { commands: cmds, onCommand: run, onOther: other, examples: ex } = latest.current;
@@ -51,18 +53,24 @@ export function VoiceControl({ commands, onCommand, onOther, allowAlways, exampl
   if (!s || !canListen()) return null;
 
   async function once() {
+    // 녹음 중에 다시 누르면 바로 멈추고 보낸다
+    if (state === "listening") return finishListening();
+    if (state === "thinking") return;
     setState("listening");
     setHeard(null);
     try {
-      handle(await listenOnce((t) => setHeard(t)), false);
+      const hints = latest.current.commands.filter((c) => c.when !== false).flatMap((c) => c.say);
+      handle(await listenOnce({ onInterim: setHeard, onPhase: setState, hints }), false);
     } catch (e) {
-      toast((e as Error).message);
+      const msg = (e as Error).message;
+      toast(msg);
+      speak(msg, { force: true });
     } finally {
       setState("idle");
     }
   }
 
-  if (always || (allowAlways && s.listenMode === "always")) {
+  if (wantsAlways) {
     const on = always && state === "on";
     return (
       <div className="voice-bar">
@@ -79,8 +87,8 @@ export function VoiceControl({ commands, onCommand, onOther, allowAlways, exampl
 
   return (
     <div className="voice-bar">
-      <button className={`btn btn-tonal${state === "listening" ? " mic-on" : ""}`} onClick={once} disabled={state === "listening"}>
-        <Icon name="mic" size={20} /> {state === "listening" ? "듣는 중…" : label}
+      <button className={`btn btn-tonal${state === "listening" ? " mic-on" : ""}`} onClick={once} disabled={state === "thinking"} aria-live="polite">
+        <Icon name="mic" size={20} /> {state === "listening" ? "듣는 중… 말을 마치면 멈춰요" : state === "thinking" ? "알아듣는 중…" : label}
       </button>
       <p className="label-medium muted voice-hint" aria-live="polite">
         {heard ? `들은 말: ${heard}` : `예: ${examples}`}
@@ -92,18 +100,19 @@ export function VoiceControl({ commands, onCommand, onOther, allowAlways, exampl
 /** 입력 칸 옆 마이크: 말한 내용을 글자로 넣는다. */
 export function DictateButton({ onText, label }: { onText: (text: string) => void; label: string }) {
   const s = useSettings();
-  const [on, setOn] = useState(false);
+  const [on, setOn] = useState<false | "listening" | "thinking">(false);
   if (!s || !canListen()) return null;
   return (
     <button
       type="button"
-      className={`icon-btn${on ? " mic-on" : ""}`}
-      aria-label={on ? "듣는 중" : label}
-      disabled={on}
+      className={`icon-btn${on === "listening" ? " mic-on" : ""}`}
+      aria-label={on === "listening" ? "듣는 중. 다시 누르면 멈춰요" : on === "thinking" ? "알아듣는 중" : label}
+      disabled={on === "thinking"}
       onClick={async () => {
-        setOn(true);
+        if (on === "listening") return finishListening();
+        setOn("listening");
         try {
-          const [text] = await listenOnce();
+          const [text] = await listenOnce({ onPhase: setOn });
           onText(text);
         } catch (e) {
           toast((e as Error).message);

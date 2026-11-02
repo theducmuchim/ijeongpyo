@@ -7,8 +7,8 @@ import { AppBar, Icon, useConfirm } from "@/components/ui";
 import { makeBackup, restoreBackup } from "@/lib/backup";
 import { db } from "@/lib/db";
 import { saveJson } from "@/lib/download";
-import { saveSettings, useSettings, type ListenMode, type Settings, type Theme } from "@/lib/settings";
-import { canListen, speak } from "@/lib/voice";
+import { saveSettings, useSettings, type ListenMode, type Settings, type Theme, type VoiceEngine } from "@/lib/settings";
+import { canListen, canListenAlways, speak } from "@/lib/voice";
 import { toast } from "@/lib/toast";
 import { clearEvents, exportPayload, loadEvents, summarize, type UsageSummary } from "@/lib/usageLog";
 import { josa } from "@/lib/josa";
@@ -221,6 +221,11 @@ const THEMES: { value: Theme; label: string; icon: "phone" | "light" | "dark" }[
   { value: "dark", label: "어둡게", icon: "dark" },
 ];
 
+const VOICES: { value: VoiceEngine; label: string }[] = [
+  { value: "ai", label: "자연스러운 AI 목소리" },
+  { value: "device", label: "휴대폰 목소리" },
+];
+
 const LISTEN: { value: ListenMode; label: string }[] = [
   { value: "push", label: "버튼 누를 때만" },
   { value: "always", label: "걷는 동안 계속 듣기" },
@@ -249,7 +254,15 @@ export default function SettingsPage() {
         <Row title="화면마다 할 일 읽기" desc="화면이 바뀌면 지금 할 일을 한 줄 읽어 줘요">
           <Switch label="화면마다 할 일 읽기" checked={s.screenSpeech} onChange={(v) => set({ screenSpeech: v })} />
         </Row>
-        <div style={{ padding: "0 16px 8px" }}>
+        <Row title="목소리" desc={s.voiceEngine === "device" ? "휴대폰에 들어 있는 목소리예요. 인터넷이 없어도 돼요." : "사람 같은 AI 목소리예요. 인터넷이 필요하고, 안 되면 휴대폰 목소리로 바로 바꿔요."} />
+        <div className="seg" role="group" aria-label="목소리">
+          {VOICES.map((t) => (
+            <button key={t.value} aria-pressed={s.voiceEngine === t.value} onClick={() => set({ voiceEngine: t.value })}>
+              {s.voiceEngine === t.value && <Icon name="check" size={18} />} {t.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ padding: "8px 16px 8px" }}>
           <button className="btn btn-text label-large" style={{ padding: 0 }} onClick={() => speak("꽃집에서 왼쪽으로 가세요. 다음 갈림길까지 약 150미터예요.", { force: true })}>
             <Icon name="volume" size={18} /> 목소리 들어 보기
           </button>
@@ -258,7 +271,14 @@ export default function SettingsPage() {
         <p className="section-label label-large">말로 조작</p>
         {canListen() ? (
           <>
-            <Row title="듣는 방식" desc="'계속 듣기'는 걷기와 길 찾기 화면에서만 켜져요. 배터리가 더 빨리 줄 수 있어요." />
+            <Row
+              title="듣는 방식"
+              desc={
+                canListenAlways()
+                  ? "'계속 듣기'는 걷기와 길 찾기 화면에서만 켜져요. 배터리가 더 빨리 줄 수 있어요."
+                  : "이 브라우저는 버튼을 누를 때만 들을 수 있어요. 버튼을 누르고 말하면, 말을 마칠 때 저절로 멈춰요."
+              }
+            />
             <div className="seg" role="group" aria-label="듣는 방식">
               {LISTEN.map((t) => (
                 <button key={t.value} aria-pressed={s.listenMode === t.value} onClick={() => set({ listenMode: t.value })}>
@@ -267,7 +287,7 @@ export default function SettingsPage() {
               ))}
             </div>
             <p className="label-medium muted" style={{ padding: "8px 16px 12px" }}>
-              말한 소리는 글자로 바꾸려고 브라우저의 음성 인식(크롬은 구글, 사파리는 애플)으로 보내져요. 이정표는 소리를 저장하지 않아요.
+              말한 소리는 글자로 바꾸려고 브라우저의 음성 인식(크롬은 구글, 사파리는 애플)이나, 그게 안 되는 브라우저에서는 구글 Gemini로 보내져요. 이정표는 소리를 저장하지 않아요.
             </p>
           </>
         ) : (

@@ -1,23 +1,31 @@
 "use client";
 
-// 소리로 들려주기(휴대폰 기본 목소리)와 말 알아듣기(브라우저 음성 인식).
-// 둘 다 휴대폰·브라우저가 지원할 때만 동작하고, 안 되면 조용히 넘어간다.
-import { loadSettings } from "./settings";
+// 소리로 들려주기와 말 알아듣기.
+// - 들려주기: 기본은 자연스러운 AI 목소리(Gemini, 무료). 같은 문장은 서버(CDN)와 휴대폰에 저장해 두고 다시 쓴다.
+//   AI 목소리를 못 받으면(인터넷 없음, 무료 한도) 휴대폰 기본 목소리로 바로 바꾼다.
+// - 알아듣기: 브라우저 음성 인식이 되면 그걸 쓰고(빠름), 안 되면(아이폰·아이패드의 크롬 등) 녹음해서 AI가 글로 옮긴다.
+import { audioCtx, recordUtterance, stopRecording, unlockAudio } from "./audio";
+import { deviceId, loadSettings } from "./settings";
 
 /* ───────────── 들려주기 ───────────── */
 
 let koVoice: SpeechSynthesisVoice | null | undefined;
 let quietUntil = 0; // 방금 말한 소리를 음성 인식이 다시 듣지 않게, 말이 끝난 뒤 잠깐 듣지 않는다
 let lastSpoken = "";
+let gen = 0; // 말을 끊을 때마다 늘린다. 늦게 도착한 소리가 끼어들지 않게.
+let chain: Promise<void> = Promise.resolve();
+let playing: AudioBufferSourceNode | null = null;
+let aiOffUntil = 0; // AI 목소리가 실패하면 잠깐 휴대폰 목소리로만 말한다
 
-export const canSpeak = () => typeof window !== "undefined" && "speechSynthesis" in window;
+export const canSpeak = () => typeof window !== "undefined" && ("speechSynthesis" in window || !!audioCtx());
 
 function pickVoice(): SpeechSynthesisVoice | null {
   if (koVoice !== undefined) return koVoice;
   const all = window.speechSynthesis.getVoices();
   if (all.length === 0) return null; // 아직 목록이 안 왔으면 다음에 다시 고른다
   const ko = all.filter((v) => v.lang.replace("_", "-").toLowerCase().startsWith("ko"));
-  koVoice = ko.find((v) => v.localService) ?? ko[0] ?? null;
+  // 기기마다 이름이 달라서, 더 자연스러운 쪽(Google·Yuna·향상됨)을 먼저 고른다
+  koVoice = ko.find((v) => /google|yuna|enhanced|premium|향상/i.test(v.name)) ?? ko.find((v) => v.localService) ?? ko[0] ?? null;
   return koVoice;
 }
 
@@ -27,31 +35,144 @@ type SpeakOpts = {
 };
 
 export function speak(text: string, opts: SpeakOpts = {}) {
-  if (!text || !canSpeak()) return;
+  if (!text || typeof window === "undefined") return;
   if (!opts.force && !loadSettings().voice) return;
-  const s = window.speechSynthesis;
-  if (!opts.queue) s.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "ko-KR";
-  const v = pickVoice();
-  if (v) u.voice = v;
-  u.onstart = () => (quietUntil = Number.POSITIVE_INFINITY);
-  u.onend = u.onerror = () => {
-    if (!s.speaking) quietUntil = Date.now() + 700;
-  };
-  quietUntil = Number.POSITIVE_INFINITY;
-  s.speak(u);
+  if (!opts.queue) stopSpeaking();
+  const my = gen;
   lastSpoken = text;
+  quietUntil = Number.POSITIVE_INFINITY;
+  // AI 목소리는 받는 데 1~3초 걸리니, 말할 차례가 오기 전에 미리 받기 시작한다
+  const audio = aiVoiceOn() ? getAudio(text).catch(() => null) : Promise.resolve(null);
+  chain = chain
+    .then(async () => {
+      if (my !== gen) return;
+      const buf = await audio;
+      if (my !== gen) return;
+      if (buf) await playBuffer(buf);
+      else await deviceSpeak(text);
+    })
+    .catch(() => {})
+    .finally(() => {
+      if (my === gen) quietUntil = Date.now() + 700;
+    });
 }
 
 export function stopSpeaking() {
-  if (!canSpeak()) return;
-  window.speechSynthesis.cancel();
+  gen++;
+  chain = Promise.resolve();
+  try {
+    playing?.stop();
+  } catch {}
+  playing = null;
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   quietUntil = Date.now() + 300;
 }
 
 export const repeatLast = () => lastSpoken && speak(lastSpoken, { force: true });
-const busySpeaking = () => (canSpeak() && window.speechSynthesis.speaking) || Date.now() < quietUntil;
+const busySpeaking = () => Date.now() < quietUntil;
+
+const aiVoiceOn = () => loadSettings().voiceEngine !== "device" && Date.now() > aiOffUntil && navigator.onLine !== false;
+
+// 휴대폰 기본 목소리. 일부 안드로이드는 끝 신호(onend)를 안 주므로 글 길이만큼 기다리고 넘어간다.
+function deviceSpeak(text: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (!("speechSynthesis" in window)) return resolve();
+    const s = window.speechSynthesis;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ko-KR";
+    const v = pickVoice();
+    if (v) u.voice = v;
+    u.rate = 1;
+    const done = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(done, 1500 + text.length * 160);
+    u.onend = u.onerror = done;
+    // 크롬은 cancel 바로 뒤의 speak를 버리는 일이 있어 잠깐 쉬고 말한다
+    setTimeout(() => s.speak(u), 60);
+  });
+}
+
+function playBuffer(buf: AudioBuffer): Promise<void> {
+  return new Promise((resolve) => {
+    const c = audioCtx();
+    if (!c) return resolve();
+    unlockAudio();
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.connect(c.destination);
+    playing = src;
+    const done = () => {
+      clearTimeout(timer);
+      if (playing === src) playing = null;
+      resolve();
+    };
+    const timer = setTimeout(done, buf.duration * 1000 + 1500);
+    src.onended = done;
+    src.start();
+  });
+}
+
+// 같은 문장은 한 번만 받는다: 이번 사용 동안은 메모리, 다음에도 쓰게 휴대폰 저장소(Cache Storage)
+const decoded = new Map<string, AudioBuffer>();
+const CACHE = "ijp-voice-1";
+export const ttsUrl = (text: string) => `/api/tts?v=1&t=${encodeURIComponent(text)}`;
+
+const inflight = new Map<string, Promise<AudioBuffer>>();
+function getAudio(text: string): Promise<AudioBuffer> {
+  const hit = decoded.get(text);
+  if (hit) return Promise.resolve(hit);
+  // 미리 받기와 말하기가 같은 문장을 동시에 부르면 한 번만 받는다
+  let p = inflight.get(text);
+  if (!p) {
+    p = fetchAudio(text).finally(() => inflight.delete(text));
+    inflight.set(text, p);
+  }
+  return p;
+}
+
+async function fetchAudio(text: string): Promise<AudioBuffer> {
+  const c = audioCtx();
+  if (!c) throw new Error("no audio");
+  const url = ttsUrl(text);
+  let bytes: ArrayBuffer | null = null;
+  let store: Cache | null = null;
+  try {
+    store = await caches.open(CACHE);
+    const m = await store.match(url);
+    if (m) bytes = await m.arrayBuffer();
+  } catch {}
+  if (!bytes) {
+    const res = await fetch(url, { headers: { "x-device-id": deviceId() } });
+    if (!res.ok) {
+      // 무료 한도(429)면 30분, 다른 문제면 3분 동안 휴대폰 목소리로만 말한다
+      aiOffUntil = Date.now() + (res.status === 429 ? 30 : 3) * 60_000;
+      throw new Error(`tts ${res.status}`);
+    }
+    try {
+      await store?.put(url, res.clone());
+    } catch {}
+    bytes = await res.arrayBuffer();
+  }
+  const buf = await c.decodeAudioData(bytes.slice(0));
+  if (decoded.size > 60) decoded.delete(decoded.keys().next().value!);
+  decoded.set(text, buf);
+  return buf;
+}
+
+/** 걷기 전에 카드 문장을 미리 받아 둔다 (말할 때 바로 나오게). 한 번 실패하면 멈춘다. */
+export async function prefetchSpeech(texts: string[]) {
+  if (typeof window === "undefined" || !loadSettings().voice) return;
+  for (const t of [...new Set(texts.filter(Boolean))]) {
+    if (!aiVoiceOn()) return;
+    try {
+      await getAudio(t);
+    } catch {
+      return;
+    }
+  }
+}
 
 // 거리를 귀로 듣기 좋게: 80미터, 150미터, 1.2킬로미터
 export function spokenDistance(m: number): string {
@@ -79,7 +200,7 @@ type Rec = {
 };
 
 function makeRec(): Rec | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined" || nativeBroken()) return null;
   const w = window as unknown as { SpeechRecognition?: new () => Rec; webkitSpeechRecognition?: new () => Rec };
   const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
   if (!Ctor) return null;
@@ -89,17 +210,39 @@ function makeRec(): Rec | null {
   return r;
 }
 
-export const canListen = () => {
-  if (typeof window === "undefined") return false;
+// 아이폰·아이패드의 크롬처럼 음성 인식이 있다고 하면서 켜자마자 꺼지는 브라우저가 있다.
+// 한 번 그러면 이 휴대폰에서는 녹음 방식만 쓴다.
+const BROKEN_KEY = "ijeongpyo.nativeStt";
+function nativeBroken() {
+  try {
+    return localStorage.getItem(BROKEN_KEY) === "broken";
+  } catch {
+    return false;
+  }
+}
+function markNativeBroken() {
+  try {
+    localStorage.setItem(BROKEN_KEY, "broken");
+  } catch {}
+}
+const hasNative = () => {
+  if (typeof window === "undefined" || nativeBroken()) return false;
   const w = window as unknown as Record<string, unknown>;
   return !!(w.SpeechRecognition ?? w.webkitSpeechRecognition);
 };
+const canRecord = () => typeof window !== "undefined" && !!navigator.mediaDevices?.getUserMedia && !!audioCtx();
+
+/** 말 알아듣기를 쓸 수 있는지 (브라우저 음성 인식이나 녹음 둘 중 하나라도 되면) */
+export const canListen = () => hasNative() || canRecord();
+/** 버튼 없이 계속 듣기는 브라우저 음성 인식이 될 때만 (녹음 방식으로 계속 들으면 AI 한도를 금방 다 쓴다) */
+export const canListenAlways = () => hasNative();
 
 export function listenError(code: string): string {
-  if (code === "not-allowed" || code === "service-not-allowed") return "마이크를 쓸 수 없어요. 휴대폰 설정에서 마이크를 허용해 주세요.";
-  if (code === "no-speech") return "말소리가 들리지 않았어요. 다시 말해 주세요.";
+  if (code === "not-allowed" || code === "service-not-allowed") return "마이크를 쓸 수 없어요. 휴대폰 설정에서 이 브라우저의 마이크를 허용해 주세요.";
+  if (code === "no-speech") return "말소리가 들리지 않았어요. 버튼을 누르고 바로 말해 주세요.";
   if (code === "network") return "음성 인식에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.";
   if (code === "audio-capture") return "마이크를 찾지 못했어요.";
+  if (code === "quota") return "오늘 말로 하기를 많이 써서 잠시 쉬어요. 버튼을 눌러 주세요.";
   return "말을 알아듣지 못했어요. 다시 말해 주세요.";
 }
 
@@ -107,42 +250,89 @@ const altsOf = (r: RecResult) => Array.from({ length: r.length }, (_, i) => r[i]
 
 let current: Rec | null = null; // 한 번에 하나만 듣는다
 
+export type ListenPhase = "listening" | "thinking";
+type ListenOpts = { onInterim?: (text: string) => void; onPhase?: (p: ListenPhase) => void; onLevel?: (l: number) => void; hints?: string[] };
+
 /** 한 번 듣고 끝낸다. 알아들은 말 후보(가장 그럴듯한 것부터)를 돌려준다. */
-export function listenOnce(onInterim?: (text: string) => void): Promise<string[]> {
+export async function listenOnce(opts: ListenOpts = {}): Promise<string[]> {
+  stopSpeaking();
+  unlockAudio();
+  if (hasNative()) {
+    try {
+      return await listenNative(opts.onInterim);
+    } catch (e) {
+      const code = (e as { code?: string }).code ?? "";
+      // 말이 없었거나 마이크를 막은 경우는 그대로 알린다. 그 밖에는 이 브라우저의 음성 인식이 고장 난 것으로 보고 녹음으로 넘어간다.
+      if (code === "no-speech" || code === "not-allowed") throw new Error(listenError(code));
+      markNativeBroken();
+    }
+  }
+  if (!canRecord()) throw new Error("이 브라우저에서는 말로 하기를 쓸 수 없어요. 직접 눌러 주세요.");
+  opts.onPhase?.("listening");
+  let wav: string;
+  try {
+    wav = await recordUtterance({ onLevel: opts.onLevel });
+  } catch (e) {
+    throw new Error(listenError((e as { code?: string }).code ?? ""));
+  }
+  opts.onPhase?.("thinking");
+  const res = await fetch("/api/transcribe", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-device-id": deviceId() },
+    body: JSON.stringify({ wav, hints: opts.hints ?? [] }),
+  });
+  if (res.status === 429) throw new Error(listenError("quota"));
+  if (!res.ok) throw new Error(listenError("network"));
+  const { text } = (await res.json()) as { text?: string };
+  if (!text?.trim()) throw new Error(listenError("no-speech"));
+  return [text.trim()];
+}
+
+/** 녹음 방식에서 '듣는 중'일 때 버튼을 다시 누르면 바로 멈추고 보낸다 */
+export const finishListening = () => {
+  stopRecording();
+  current?.stop();
+};
+
+function listenNative(onInterim?: (text: string) => void): Promise<string[]> {
   return new Promise((resolve, reject) => {
-    const rec = makeRec();
-    if (!rec) return reject(new Error("이 브라우저에서는 음성 인식이 안 돼요. 직접 적어 주세요."));
+    const rec = makeRec()!;
     current?.abort();
     current = rec;
-    stopSpeaking();
     rec.continuous = false;
     rec.interimResults = !!onInterim;
     let done = false;
     let best: string[] = [];
+    let heardAnything = false;
+    const startedAt = Date.now();
+    const fail = (code: string) => {
+      if (done) return;
+      done = true;
+      reject(Object.assign(new Error(code), { code }));
+    };
     rec.onresult = (e) => {
+      heardAnything = true;
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i];
         if (r.isFinal) best = altsOf(r);
         else onInterim?.(r[0].transcript);
       }
     };
-    rec.onerror = (e) => {
-      if (done) return;
-      done = true;
-      reject(new Error(listenError(e.error)));
-    };
+    rec.onerror = (e) => fail(e.error === "no-speech" && Date.now() - startedAt < 1200 ? "broken" : e.error || "broken");
     rec.onend = () => {
       if (current === rec) current = null;
       if (done) return;
-      done = true;
-      if (best.length) resolve(best);
-      else reject(new Error(listenError("no-speech")));
+      if (best.length) {
+        done = true;
+        return resolve(best);
+      }
+      // 1.5초도 안 돼서 아무것도 못 듣고 끝나면 듣기 자체가 안 되는 브라우저다
+      fail(!heardAnything && Date.now() - startedAt < 1500 ? "broken" : "no-speech");
     };
     try {
       rec.start();
     } catch {
-      done = true;
-      reject(new Error(listenError("")));
+      fail("broken");
     }
   });
 }
