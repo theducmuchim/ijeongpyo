@@ -1,0 +1,306 @@
+/* 이정표 소개 사이트 — Figma "Vibrant Designer Portfolio" 시안의 색과 짜임
+   색은 시안의 Styles 프레임에서 뽑았다: 초록 #069A0B, 노랑 #FEBD1B, 파랑 #1943CD, 빨강 #FF3300,
+   갈색 #7A5020 / #452107, 크림 #FBFAE8, 하늘 #D8E8FF, 회색 #EBEBEB */
+
+.site {
+  --g: #069a0b;
+  --y: #febd1b;
+  --b: #1943cd;
+  --r: #ff3300;
+  --br: #7a5020;
+  --br2: #452107;
+  --cream: #fbfae8;
+  --sky: #d8e8ff;
+  --gray: #ebebeb;
+  --ink: #111111;
+  --display: "Bricolage Grotesque", "Noto Sans KR", sans-serif;
+  --body: "Noto Sans KR", "Bricolage Grotesque", system-ui, sans-serif;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--body);
+  color-scheme: light;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+}
+:where(.site) a { color: inherit; text-decoration: none; }
+.site h1,
+.site h2,
+.site h3,
+.site p { margin: 0; word-break: keep-all; }
+
+/* ───────────── 맨 위 메뉴: 시안의 노란 알약, 파란 네모, 빨간 동그라미 ───────────── */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px clamp(16px, 4vw, 48px);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+}
+.logo { font-family: var(--display); font-weight: 900; font-size: 22px; color: var(--g); letter-spacing: -0.03em; }
+.shapes { display: flex; align-items: center; }
+.shape {
+  height: 56px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 18px;
+  transition: transform 150ms ease;
+}
+.shape:hover { transform: translateY(-2px); }
+.pill { background: var(--y); border-radius: 28px 0 0 28px; color: var(--ink); }
+.square { background: var(--b); color: #fff; }
+.circle { background: var(--r); color: #fff; width: 56px; padding: 0; border-radius: 50%; font-size: 13px; text-align: center; line-height: 1.15; }
+
+/* ───────────── 첫 화면 ───────────── */
+.hero {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 32px;
+  align-items: end;
+  padding: clamp(32px, 6vw, 80px) clamp(16px, 4vw, 48px) 48px;
+}
+.eyebrow { grid-column: 1 / -1; font-weight: 700; font-size: 15px; color: var(--b); }
+.title {
+  position: relative;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(64px, 11vw, 168px);
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+  color: var(--g);
+  text-wrap: balance;
+}
+.star {
+  position: absolute;
+  width: clamp(56px, 8vw, 120px);
+  top: -0.1em;
+  right: clamp(-20px, 2vw, 40px);
+  animation: spin 18s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.heroSide { display: flex; flex-direction: column; gap: 20px; padding-bottom: 12px; }
+.heroSide p { font-size: clamp(16px, 1.4vw, 19px); line-height: 1.65; font-weight: 500; }
+.heroCta { display: flex; flex-wrap: wrap; gap: 12px; }
+.btnGreen,
+.btnLine {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 0 28px;
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: 700;
+  transition: transform 150ms ease;
+}
+.btnGreen { background: var(--g); color: #fff; }
+.btnLine { border: 2px solid var(--ink); }
+.btnGreen:hover,
+.btnLine:hover { transform: translateY(-2px); }
+
+/* 하늘색 픽셀 그림 띠 */
+.band {
+  background: var(--sky);
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 24px;
+  padding: 40px clamp(16px, 4vw, 48px);
+  overflow: hidden;
+}
+.pxSign { flex: none; }
+.pxSignSmall { flex: none; opacity: 0.85; }
+.pxSteps { display: flex; gap: 18px; align-items: center; }
+.pxSteps svg:nth-child(odd) { transform: translateY(-16px); }
+
+/* ───────────── 공통 제목 ───────────── */
+.h2 {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(36px, 5vw, 68px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+/* 왜 필요한가 */
+.why { padding: clamp(56px, 8vw, 112px) clamp(16px, 4vw, 48px); display: flex; flex-direction: column; gap: 40px; }
+.whyGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.whyGrid > div { border-top: 3px solid var(--ink); padding-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.whyGrid b { font-size: 20px; font-weight: 900; letter-spacing: -0.02em; }
+.whyGrid p { font-size: 16px; line-height: 1.7; color: #333; }
+.textLink { font-weight: 700; color: var(--b) !important; text-decoration: underline !important; text-underline-offset: 4px; align-self: flex-start; }
+
+/* ───────────── 쓰는 법: 사진 콜라주 ───────────── */
+.how { padding: 0 clamp(16px, 4vw, 48px) clamp(56px, 8vw, 112px); display: flex; flex-direction: column; gap: 32px; }
+.collage { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+.tile { display: flex; flex-direction: column; overflow: hidden; }
+.tile .phone { margin: 40px auto 0; }
+.cap { background: #fff; padding: 20px; display: flex; flex-direction: column; gap: 6px; flex: 1; border-top: 1px solid var(--gray); }
+.cap span { font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--b); }
+.cap b { font-size: 20px; font-weight: 900; letter-spacing: -0.02em; }
+.cap p { font-size: 15px; line-height: 1.65; color: #333; }
+.tYellow { background: var(--y); }
+.tBrown { background: var(--br); }
+.tBlue { background: var(--sky); }
+
+.phone {
+  width: min(240px, 70%);
+  aspect-ratio: 390 / 844;
+  border-radius: 32px 32px 0 0;
+  border: 8px solid var(--ink);
+  border-bottom: 0;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.45);
+}
+.phone img { width: 100%; height: auto; display: block; }
+
+/* 시안의 큰 파란 막대 버튼 */
+.bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  background: var(--b);
+  color: #fff !important;
+  border-radius: 20px;
+  min-height: 96px;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(26px, 3.4vw, 44px);
+  letter-spacing: -0.03em;
+  transition: background 150ms ease;
+}
+.bar:hover { background: #1236a8; }
+
+/* ───────────── 길잡이 줄 (시안의 Inspo loop) ───────────── */
+.loop { background: var(--cream); padding: clamp(48px, 6vw, 80px) 0; display: flex; flex-direction: column; gap: 28px; }
+.loopTitle {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(32px, 4vw, 52px);
+  letter-spacing: -0.04em;
+  padding: 0 clamp(16px, 4vw, 48px);
+  color: var(--br);
+}
+.marquee { overflow: hidden; }
+.track { display: flex; gap: 12px; width: max-content; animation: slide 36s linear infinite; }
+@keyframes slide { to { transform: translateX(-50%); } }
+.chip { flex: none; padding: 14px 22px; border-radius: 999px; font-weight: 700; font-size: 17px; white-space: nowrap; }
+.chip[data-tone="0"] { background: var(--g); color: #fff; }
+.chip[data-tone="1"] { background: var(--y); }
+.chip[data-tone="2"] { background: var(--b); color: #fff; }
+.chip[data-tone="3"] { background: var(--r); color: #fff; }
+.streets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 0 clamp(16px, 4vw, 48px); }
+.streets img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; display: block; }
+
+/* ───────────── 기능 ───────────── */
+.features { padding: clamp(56px, 8vw, 112px) clamp(16px, 4vw, 48px); display: flex; flex-direction: column; gap: 36px; }
+.featGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.feat { border-radius: 24px; padding: 28px; display: flex; flex-direction: column; gap: 12px; min-height: 240px; }
+.feat h3 { font-family: var(--display); font-size: clamp(24px, 2.4vw, 32px); font-weight: 900; letter-spacing: -0.03em; }
+.feat p { font-size: 16px; line-height: 1.7; flex: 1; }
+.feat a { font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+.fBlue { background: var(--b); color: #fff; }
+.fRed { background: var(--r); color: #fff; }
+.fYellow { background: var(--y); }
+.fBrown { background: var(--br2); color: #fff; }
+.phones { display: flex; justify-content: center; gap: clamp(16px, 4vw, 48px); background: var(--gray); border-radius: 24px; padding: 40px 16px 0; }
+.phones .phone { width: min(260px, 44%); }
+.note { font-size: 14px; line-height: 1.7; color: #555; max-width: 720px; }
+
+/* 초록 줄무늬 띠 */
+.stripes {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  background: repeating-linear-gradient(90deg, var(--g) 0 48px, #fff 48px 96px);
+  padding: 48px 16px;
+}
+.stripePill {
+  background: var(--sky);
+  color: var(--b) !important;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(24px, 3.6vw, 48px);
+  letter-spacing: -0.03em;
+  padding: 28px clamp(28px, 5vw, 64px);
+  border-radius: 999px;
+  text-align: center;
+  transition: transform 150ms ease;
+}
+.stripePill:hover { transform: scale(1.03); }
+
+/* 자주 묻는 질문: 시안의 찢긴 종이 */
+.paper {
+  background: var(--cream);
+  margin: 0 clamp(16px, 4vw, 48px);
+  padding: clamp(48px, 6vw, 80px) clamp(20px, 4vw, 56px);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  clip-path: polygon(0 2%, 4% 0, 9% 1.6%, 15% 0.2%, 22% 1.8%, 30% 0, 37% 1.4%, 45% 0.3%, 53% 1.9%, 61% 0.2%, 69% 1.5%, 77% 0, 85% 1.7%, 92% 0.4%, 100% 1.6%, 100% 98%, 95% 100%, 88% 98.4%, 80% 99.8%, 72% 98.2%, 64% 100%, 56% 98.6%, 48% 99.7%, 40% 98.1%, 32% 99.9%, 24% 98.4%, 16% 100%, 8% 98.3%, 0 99.6%);
+  transform: rotate(-0.6deg);
+  margin-top: clamp(48px, 6vw, 80px);
+}
+.faq { display: flex; flex-direction: column; gap: 10px; max-width: 820px; }
+.faq details { background: #fff; border-radius: 16px; padding: 0 20px; }
+.faq summary { cursor: pointer; list-style: none; padding: 18px 0; font-size: 18px; font-weight: 700; display: flex; justify-content: space-between; gap: 12px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font-family: var(--display); font-weight: 800; font-size: 24px; color: var(--g); line-height: 1; }
+.faq details[open] summary::after { content: "−"; }
+.faq details p { padding: 0 0 18px; font-size: 16px; line-height: 1.7; color: #333; }
+
+/* 마지막 */
+.end { padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 48px); display: flex; flex-direction: column; gap: 28px; align-items: flex-start; }
+.endTitle {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(52px, 9vw, 132px);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  color: var(--g);
+}
+
+/* 바닥 */
+.foot { border-top: 1px solid var(--gray); padding: 40px clamp(16px, 4vw, 48px) 56px; display: flex; flex-direction: column; gap: 10px; }
+.footShapes { display: flex; margin-bottom: 12px; }
+.footShapes i { display: block; height: 40px; }
+.footShapes .pill { width: 72px; border-radius: 20px 0 0 20px; }
+.footShapes .square { width: 40px; }
+.footShapes .circle { width: 40px; }
+.foot p { font-weight: 700; }
+.footSmall { font-weight: 400 !important; color: #555; font-size: 14px; }
+.footLinks { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 8px; font-size: 15px; }
+.footLinks a { text-decoration: underline; text-underline-offset: 4px; }
+
+/* ───────────── 휴대폰 화면 ───────────── */
+@media (max-width: 860px) {
+  .hero { grid-template-columns: 1fr; gap: 24px; }
+  .whyGrid { grid-template-columns: 1fr; }
+  .collage { grid-template-columns: 1fr; }
+  .featGrid { grid-template-columns: 1fr; }
+  .streets { grid-template-columns: repeat(2, 1fr); }
+  .pxSignSmall { display: none; }
+  .band { min-height: 220px; }
+  .shape { height: 44px; padding: 0 12px; font-size: 13px; }
+  .circle { width: 44px; padding: 0; font-size: 11px; }
+  .pill { border-radius: 22px 0 0 22px; }
+}
+@media (max-width: 520px) {
+  .square { display: none; }
+  .pxSteps { display: none; }
+  .phones .phone { width: 46%; border-width: 6px; border-radius: 24px 24px 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star,
+  .track { animation: none; }
+}

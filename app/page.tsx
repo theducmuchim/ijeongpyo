@@ -145,6 +145,13 @@ export default function Home() {
             </span>
             <LineIcon name="chevron" />
           </Link>
+          <Link href="/intro" className="info-row pressable" style={{ marginTop: 8 }}>
+            <span>
+              <b>이정표 소개 사이트</b>
+              <small>다른 사람에게 이정표를 알려 줄 때 보여 주세요</small>
+            </span>
+            <LineIcon name="chevron" />
+          </Link>
         </section>
       </div>
       <TabBar />
