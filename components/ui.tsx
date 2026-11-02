@@ -354,14 +354,15 @@ export function EmptySignpost() {
 }
 
 // 사진 찍기 버튼: 휴대폰에서는 바로 뒤 카메라가 열린다.
-export function CameraInput({ id, onPick }: { id: string; onPick: (file: File) => void }) {
+// gallery가 true면 바로 카메라를 열지 않고, 휴대폰이 '사진 찍기 / 앨범에서 고르기'를 물어본다
+export function CameraInput({ id, onPick, gallery = false }: { id: string; onPick: (file: File) => void; gallery?: boolean }) {
   return (
     <input
       id={id}
       className="hidden-input"
       type="file"
       accept="image/*"
-      capture="environment"
+      capture={gallery ? undefined : "environment"}
       onChange={(e) => {
         const f = e.target.files?.[0];
         e.target.value = "";

@@ -312,7 +312,10 @@ function StepStrip({ route, index }: { route: Route; index: number }) {
   const card = route.cards[index];
   const strip = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    strip.current?.querySelector(".step.on")?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    // 화면 전체가 같이 내려가지 않게, 줄 안에서만 옆으로 민다
+    const box = strip.current;
+    const on = box?.querySelector<HTMLElement>(".step.on");
+    if (box && on) box.scrollTo({ left: on.offsetLeft - box.clientWidth / 2 + on.clientWidth / 2, behavior: "smooth" });
   }, [index]);
   return (
     <div className="walk-head">

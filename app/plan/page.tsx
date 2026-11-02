@@ -4,12 +4,18 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { CornerBlob, LineIcon, TabBar, TONES } from "@/components/brand";
 import { Roadview } from "@/components/Roadview";
-import { AiWaiting, AppBar, Icon, MockBadge } from "@/components/ui";
-import { requestPlaces, requestPlan } from "@/lib/api";
-import { db, newId } from "@/lib/db";
+import { AiWaiting, AppBar, CameraInput, Icon, MockBadge } from "@/components/ui";
+import { requestCheck, requestPlaces, requestPlan } from "@/lib/api";
+import { db, newId, savePhoto } from "@/lib/db";
+import { blobToPayload, shrinkPhoto } from "@/lib/image";
+import { josa } from "@/lib/josa";
+import { toast } from "@/lib/toast";
 import { bearingDeg, distanceM } from "@/lib/geo";
 import { logEvent } from "@/lib/usageLog";
-import type { Card, Place, PlanResult, Route } from "@/types";
+import type { Card, CheckResult, Place, PlanCard, PlanResult, Route } from "@/types";
+
+// 로드뷰를 보고 그 자리를 직접 찍어(또는 앨범에서 골라) 올린 사진. 저장할 때 카드에 들어간다.
+type Shot = { url: string; blob: Blob; result?: CheckResult; busy?: boolean };
 
 // 처음 가는 길: 도착지를 고르면 지도 데이터로 사진 없는 카드 초안을 만들고, 미리 둘러본 뒤 걷는다.
 
@@ -37,6 +43,45 @@ function km(m: number) {
   return m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`;
 }
 
+function ShotBox({ i, card, shot, onPick, onRemove }: { i: number; card: PlanCard; shot?: Shot; onPick: (f: File) => void; onRemove: () => void }) {
+  const inputId = `shot-${i}`;
+  if (!shot) {
+    return (
+      <>
+        <CameraInput id={inputId} gallery onPick={onPick} />
+        <label htmlFor={inputId} className="btn btn-text label-large" style={{ alignSelf: "flex-start", padding: 0, minHeight: 36, position: "relative", cursor: "pointer" }}>
+          <Icon name="camera" size={18} /> 이 자리 사진 올리기
+        </label>
+      </>
+    );
+  }
+  const r = shot.result;
+  const name = card.landmark.name;
+  return (
+    <div className="shot-box">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={shot.url} alt={`${card.order}번 자리 사진`} />
+      <div className="shot-text">
+        {shot.busy ? (
+          <p className="body-medium">사진 확인하는 중…</p>
+        ) : r ? (
+          <>
+            <p className="body-medium">
+              {r.seen && name ? `사진에 ${josa(name, "이/가")} 보여요` : name ? `사진에서 ${josa(name, "을/를")} 못 찾았어요. 대신 ${josa(r.landmark.name, "을/를")} 길잡이로 써요` : `${josa(r.landmark.name, "을/를")} 길잡이로 써요`}
+            </p>
+            <p className="label-medium">저장하면: {r.instruction}</p>
+          </>
+        ) : (
+          <p className="body-medium">사진만 넣어 둘게요. 문장은 그대로예요.</p>
+        )}
+        <button className="btn btn-text label-large" style={{ padding: 0, minHeight: 32, width: "auto", alignSelf: "flex-start" }} onClick={onRemove}>
+          사진 빼기
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function PlanPage() {
   const router = useRouter();
   const prefill = useSyncExternalStore(noSubscribe, readDest, () => null);
@@ -50,6 +95,7 @@ export default function PlanPage() {
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<number | null>(null); // 로드뷰를 연 카드
   const [name, setName] = useState("");
+  const [shots, setShots] = useState<Record<number, Shot>>({});
 
   useEffect(() => {
     if (!("geolocation" in navigator)) return void setTimeout(() => setGps("denied"), 0);
@@ -104,11 +150,64 @@ export default function PlanPage() {
     }
   }
 
+  async function addShot(i: number, c: PlanCard, file: File) {
+    const blob = await shrinkPhoto(file);
+    const url = URL.createObjectURL(blob);
+    setShots((m) => ({ ...m, [i]: { url, blob, busy: true } }));
+    try {
+      const result = await requestCheck({
+        photo: await blobToPayload(blob),
+        expected: c.landmark.name || null,
+        candidates: c.candidates.map((x) => x.name),
+        action: c.action,
+        instruction: c.instruction,
+      });
+      setShots((m) => (m[i]?.url === url ? { ...m, [i]: { url, blob, result } } : m));
+    } catch (e) {
+      // AI를 못 불러도 사진은 넣어 둔다. 카드 문장은 지도 데이터로 만든 그대로.
+      setShots((m) => (m[i]?.url === url ? { ...m, [i]: { url, blob } } : m));
+      toast((e as Error).message);
+    }
+  }
+
+  function removeShot(i: number) {
+    setShots((m) => {
+      const next = { ...m };
+      if (next[i]) URL.revokeObjectURL(next[i].url);
+      delete next[i];
+      return next;
+    });
+  }
+
   async function save() {
     if (!plan || !target) return;
     setBusy("save");
     const id = newId();
-    const cards: Card[] = plan.cards.map((c) => ({
+    const photoIds: Record<number, string> = {};
+    for (const [k, shot] of Object.entries(shots)) photoIds[Number(k)] = await savePhoto(shot.blob);
+    const cards: Card[] = plan.cards.map((c, i) => {
+      const shot = shots[i];
+      if (shot) {
+        // 직접 올린 사진이 있으면 그 카드는 처음부터 사진 카드
+        const r = shot.result;
+        return {
+          id: newId(),
+          order: c.order,
+          photoId: photoIds[i],
+          photoDescription: r?.photoDescription ?? "",
+          landmark: r?.landmark ?? c.landmark,
+          action: c.action,
+          instruction: r?.instruction || c.instruction,
+          userNote: "",
+          warning: r?.warning ?? null,
+          lat: c.lat,
+          lng: c.lng,
+          source: "photo",
+          candidates: c.candidates,
+          checkedAt: new Date().toISOString(),
+        };
+      }
+      return {
       id: newId(),
       order: c.order,
       photoId: "",
@@ -122,7 +221,8 @@ export default function PlanPage() {
       lng: c.lng,
       source: "draft",
       candidates: c.candidates,
-    }));
+      };
+    });
     const route: Route = {
       id,
       name: name.trim() || `${target.name} 가는 길`,
@@ -137,6 +237,7 @@ export default function PlanPage() {
     await db.routes.put(route);
     navigator.storage?.persist?.().catch(() => {});
     logEvent(id, "plan_made", cards.length);
+    if (Object.keys(shots).length) toast(`사진 ${Object.keys(shots).length}장을 넣어 저장했어요`);
     router.push(`/walk/${id}`);
   }
 
@@ -173,8 +274,13 @@ export default function PlanPage() {
             </p>
           </div>
           <p className="body-medium muted">
-            사진이 없는 카드예요. 걸으면서 길잡이가 보이면 사진을 찍어 채워요. 카드마다 로드뷰로 미리 둘러볼 수 있어요.
+            사진이 없는 카드예요. 로드뷰로 미리 둘러보고, 그 자리 사진이 있으면 올려서 바로 사진 카드로 만들 수 있어요. 없으면 걸으면서 채워요.
           </p>
+          {Object.keys(shots).length > 0 && (
+            <p className="chip label-medium">
+              사진 {Object.keys(shots).length}/{plan.cards.length}장 넣음
+            </p>
+          )}
           <div className="timeline stagger">
             <div className="timeline-head">
               <span>순서</span>
@@ -207,6 +313,7 @@ export default function PlanPage() {
                       <Icon name="image" size={18} /> {open === i ? "로드뷰 닫기" : "로드뷰로 미리 보기"}
                     </button>
                     {open === i && <Roadview lat={c.lat} lng={c.lng} heading={heading} />}
+                    <ShotBox i={i} card={c} shot={shots[i]} onPick={(f) => addShot(i, c, f)} onRemove={() => removeShot(i)} />
                   </div>
                 </div>
               );

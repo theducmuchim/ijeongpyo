@@ -1357,3 +1357,18 @@ textarea.field { resize: vertical; min-height: 64px; }
 .t-card .t-title { position: relative; font-size: calc(16px * var(--scale)); font-weight: 600; margin: 0; padding-right: 36px; word-break: keep-all; }
 .t-card .t-meta { position: relative; display: flex; align-items: center; gap: 8px; font-size: 12.5px; margin: 0; }
 .t-card .btn-text { color: inherit; }
+
+/* 처음 가는 길 미리 보기: 직접 올린 그 자리 사진 */
+.shot-box {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  animation: pop-in var(--dur-medium) var(--ease-decel) both;
+}
+.shot-box img { width: 76px; height: 76px; object-fit: cover; border-radius: 10px; flex: none; }
+.shot-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.shot-text .btn-text { color: inherit; text-decoration: underline; }
