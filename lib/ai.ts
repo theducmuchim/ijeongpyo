@@ -93,3 +93,71 @@ export function friendlyError(e: unknown): { message: string; status: number } {
   }
   return { message: "AI 답을 받지 못했어요. 잠시 뒤 다시 해 주세요.", status: 502 };
 }
+
+/* ───────────── 목소리 (Gemini 음성 만들기·알아듣기) ───────────── */
+
+// 음성 만들기 모델. 무료로 되는 이름이 자주 바뀌어서 차례로 시도한다. GEMINI_TTS_MODEL로 하나를 정할 수 있다.
+export const TTS_MODELS = (process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-lite-tts,gemini-3.8-flash-tts,gemini-3.1-flash-tts-preview,gemini-2.5-flash-preview-tts")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+export const TTS_VOICE = process.env.GEMINI_TTS_VOICE || "Kore";
+let ttsModel: string | null = null; // 한 번 된 모델은 다음에도 먼저 쓴다
+
+/** 글 → 소리(24kHz 16비트 PCM, base64). 안 되면 오류를 던진다. */
+export async function synthesize(text: string, voice = TTS_VOICE): Promise<{ pcm: string; rate: number; model: string }> {
+  const order = ttsModel ? [ttsModel, ...TTS_MODELS.filter((m) => m !== ttsModel)] : TTS_MODELS;
+  let last: unknown = null;
+  for (const model of order) {
+    const t = Date.now();
+    try {
+      const res = await getClient().models.generateContent({
+        model,
+        contents: [{ role: "user", parts: [{ text: `차분하고 또박또박, 길 안내처럼 읽어 주세요: ${text}` }] }],
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+          httpOptions: { timeout: 20000 },
+        },
+      });
+      const part = res.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
+      const data = part?.inlineData?.data;
+      if (!data) throw new Error("소리가 오지 않았어요");
+      const rate = Number(/rate=(\d+)/.exec(part?.inlineData?.mimeType ?? "")?.[1] ?? 24000);
+      aiTrace.push({ model, ms: Date.now() - t, ok: true });
+      ttsModel = model;
+      return { pcm: data, rate, model };
+    } catch (e) {
+      aiTrace.push({ model, ms: Date.now() - t, ok: false, error: String((e as Error)?.message ?? e).slice(0, 300) });
+      last = e;
+    }
+  }
+  throw last ?? new Error("음성 모델이 없어요");
+}
+
+/** 소리(WAV, base64) → 한국어 글. 명령 후보를 같이 주면 그 말에 가깝게 옮긴다. */
+export async function transcribe(wav: string, hints: string[] = []): Promise<string> {
+  const res = await getClient().models.generateContent({
+    model: LITE_MODEL,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { inlineData: { mimeType: "audio/wav", data: wav } },
+          {
+            text:
+              "이 소리에서 사람이 한 한국어 말을 그대로 글자로 옮겨라. 말이 없거나 잡음뿐이면 빈 글자를 준다. 뜻을 바꾸거나 덧붙이지 않는다." +
+              (hints.length ? `\n이 화면에서 자주 하는 말(비슷하게 들리면 이 말로 적는다): ${hints.slice(0, 40).join(", ")}` : "") +
+              '\nJSON으로만 답한다: {"text":"..."}',
+          },
+        ],
+      },
+    ],
+    config: { responseMimeType: "application/json", httpOptions: { timeout: 15000 } },
+  });
+  try {
+    return String((JSON.parse(res.text ?? "{}") as { text?: string }).text ?? "").trim();
+  } catch {
+    return (res.text ?? "").trim();
+  }
+}

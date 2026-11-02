@@ -1,4 +1,4 @@
-import { aiTrace, askAI, isMockMode, tuning } from "@/lib/ai";
+import { TTS_MODELS, aiTrace, askAI, isMockMode, synthesize, transcribe, tuning } from "@/lib/ai";
 import { hasStores, rankForLandmark, storesNear } from "@/lib/stores";
 import { hasTmap, pedestrianRoute, reverseGeocode, searchPlaces } from "@/lib/tmap";
 import { POST as cardsFromWalk } from "../cards-from-walk/route";
@@ -90,6 +90,41 @@ export async function GET(req: Request) {
   }
 
   // ?plan=1: 카드 초안을 실제로 한 번 만들어 본다 (대전역 근처 → 대전역)
+  // 목소리: 모델마다 소리를 만들어 보고, 만든 소리를 다시 글로 옮겨 본다
+  if (url.searchParams.get("tts")) {
+    const out: Record<string, unknown> = {};
+    let wav: string | null = null;
+    for (const m of TTS_MODELS) {
+      const t = Date.now();
+      try {
+        process.env.GEMINI_TTS_MODEL = m;
+        const r = await synthesize("꽃집에서 왼쪽으로 가세요. 다음 갈림길까지 약 150미터예요.");
+        out[m] = { ok: true, ms: Date.now() - t, bytes: Math.round((r.pcm.length * 3) / 4), rate: r.rate, used: r.model };
+        if (!wav) {
+          const pcm = Buffer.from(r.pcm, "base64");
+          const h = Buffer.alloc(44);
+          h.write("RIFF", 0); h.writeUInt32LE(36 + pcm.length, 4); h.write("WAVE", 8); h.write("fmt ", 12);
+          h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(r.rate, 24);
+          h.writeUInt32LE(r.rate * 2, 28); h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34); h.write("data", 36); h.writeUInt32LE(pcm.length, 40);
+          wav = Buffer.concat([h, pcm]).toString("base64");
+        }
+        break;
+      } catch (e) {
+        out[m] = { ok: false, ms: Date.now() - t, error: String((e as Error).message).slice(0, 400) };
+      }
+    }
+    let stt: unknown = null;
+    if (wav) {
+      const t = Date.now();
+      try {
+        stt = { ok: true, ms: Date.now() - t, text: await transcribe(wav, ["다음", "이전", "다시"]) };
+      } catch (e) {
+        stt = { ok: false, error: String((e as Error).message).slice(0, 400) };
+      }
+    }
+    return Response.json({ tts: out, stt, trace: aiTrace.slice(-8) });
+  }
+
   // 건물 이름과 번지: TMAP 역지오코딩과 상가정보의 건물 칸
   if (url.searchParams.get("addr")) {
     const [rev, rev2, shops] = await Promise.all([
