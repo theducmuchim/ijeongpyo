@@ -17,8 +17,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return json as T;
 }
 
-export const requestCards = (junctions: { photo: ImagePayload; note: string }[]) =>
-  post<{ cards: CardDraft[]; mock?: boolean }>("/api/cards-from-walk", { junctions });
+export const requestCards = (junctions: { photo: ImagePayload; note: string }[], part: { startOrder: number; final: boolean } = { startOrder: 1, final: true }) =>
+  post<{ cards: CardDraft[]; mock?: boolean }>("/api/cards-from-walk", { junctions, ...part });
 
 export const requestWhereAmI = (body: {
   photos: ImagePayload[];

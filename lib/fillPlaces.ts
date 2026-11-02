@@ -14,7 +14,12 @@ export async function fillPlaces(route: Route): Promise<Route | null> {
   if (need.length === 0) return null;
   asked.add(route.id);
   try {
-    const { places } = await requestNearAddress(need.map((i) => ({ lat: route.cards[i].lat!, lng: route.cards[i].lng! })));
+    // 서버는 한 번에 25곳씩 받는다. 카드가 많으면 나눠 묻는다.
+    const places: (Awaited<ReturnType<typeof requestNearAddress>>["places"][number])[] = [];
+    for (let k = 0; k < need.length; k += 25) {
+      const r = await requestNearAddress(need.slice(k, k + 25).map((i) => ({ lat: route.cards[i].lat!, lng: route.cards[i].lng! })));
+      places.push(...r.places);
+    }
     const found = new Map(need.map((i, k) => [route.cards[i].id, places[k] ?? {}]));
     // 그사이 다른 화면에서 고친 내용을 덮지 않게, 저장된 길을 다시 읽어 빈 칸에만 넣는다
     const latest = (await db.routes.get(route.id)) ?? route;

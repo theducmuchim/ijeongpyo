@@ -10,7 +10,11 @@ import { hasTmap, pedestrianRoute, reverseGeocode, type TurnPoint } from "@/lib/
 import type { Candidate, PlanCard, PlanResult } from "@/types";
 
 export const maxDuration = 60;
-const MAX_POINTS = 20;
+// 카드 수에는 상한이 없다. 길이 길면 꺾는 곳이 많은 만큼 카드도 많아진다.
+// 대신 서버 시간 제한(60초) 안에 끝나게, AI는 20곳씩 나눠 동시에 부르고 시간이 모자라면 AI 없이 틀로 만든다.
+const AI_CHUNK = 20;
+const BUDGET_AI_MS = 30_000; // 여기까지 가게 찾기가 끝나지 않았으면 AI를 건너뛴다
+const BUDGET_ADDR_MS = 48_000; // 여기를 넘으면 건물·번지 찾기를 건너뛴다
 
 type Body = { start?: { lat: number; lng: number }; end?: { lat: number; lng: number; name: string } };
 
@@ -39,7 +43,8 @@ export async function POST(req: Request) {
   try {
     // 1. 걷는 길과 꺾는 지점
     const route = hasTmap() ? await pedestrianRoute(start!, end!) : mockRoute(start!, end!);
-    const points: TurnPoint[] = route.points.slice(-MAX_POINTS);
+    const t0 = Date.now();
+    const points: TurnPoint[] = route.points;
 
     // 2. 지점마다 주변 가게 (없으면 반경을 넓혀 한 번 더). 상가정보 키가 없으면 TMAP의 근처 장소 이름이라도 쓴다.
     // 공공데이터포털이 한꺼번에 부르면 429를 주므로 3곳씩 나눠 부른다
@@ -65,30 +70,41 @@ export async function POST(req: Request) {
     for (let k = 0; k < points.length; k += 3) {
       nearby.push(...(await Promise.all(points.slice(k, k + 3).map((p, j) => lookup(p, k + j)))));
     }
+    const describe = (p: TurnPoint, i: number, n: number) => {
+      const shops = nearby[i].map((s) => `${s.name}(${s.category || "업종 모름"}, ${s.floor ? `${s.floor}층` : "층 모름"}, ${s.dist}m)`).join(", ");
+      return `${n}번 지점: 행동 ${p.action}(${ACTION_KO[p.action]}${p.crossing ? ", 횡단보도 건넘" : ""}) / 가게 후보: ${shops || "없음"}`;
+    };
 
-    // 3. AI가 길잡이를 고르고 문장을 쓴다. AI가 안 되면 가까운 1층 가게로 문장을 만든다.
-    let picks: { candidates: string[]; instruction: string }[] | null = null;
-    if (!isMockMode()) {
-      const text = points
-        .map((p, i) => {
-          const shops = nearby[i].map((s) => `${s.name}(${s.category || "업종 모름"}, ${s.floor ? `${s.floor}층` : "층 모름"}, ${s.dist}m)`).join(", ");
-          return `${i + 1}번 지점: 행동 ${p.action}(${ACTION_KO[p.action]}${p.crossing ? ", 횡단보도 건넘" : ""}) / 가게 후보: ${shops || "없음"}`;
-        })
-        .join("\n");
-      for (let t = 0; t < 2 && !picks; t++) {
-        try {
-          const raw = await askAI(PLAN_ROUTE_PROMPT, [], `도착지: ${end!.name}\n${text}`, { lite: true });
-          picks = parsePlan(raw, points.length);
-        } catch (e) {
-          friendlyError(e); // 로그만 남기고, 아래에서 문장 틀로 만든다
-          break;
-        }
-      }
+    // 3. AI가 길잡이를 고른다(20곳씩 나눠 동시에). AI가 안 되거나 시간이 모자라면 가까운 1층 가게로 문장을 만든다.
+    const picks: ({ candidates: string[]; instruction: string } | null)[] = new Array(points.length).fill(null);
+    if (!isMockMode() && Date.now() - t0 < BUDGET_AI_MS) {
+      const starts: number[] = [];
+      for (let k = 0; k < points.length; k += AI_CHUNK) starts.push(k);
+      await Promise.all(
+        starts.map(async (start) => {
+          const part = points.slice(start, start + AI_CHUNK);
+          const text = part.map((p, j) => describe(p, start + j, j + 1)).join("\n");
+          const where = starts.length > 1 ? `\n(긴 길을 나눈 ${starts.indexOf(start) + 1}/${starts.length}번째 부분)` : "";
+          for (let t = 0; t < 2; t++) {
+            try {
+              const raw = await askAI(PLAN_ROUTE_PROMPT, [], `도착지: ${end!.name}${where}\n${text}`, { lite: true });
+              const parsed = parsePlan(raw, part.length);
+              if (parsed) {
+                parsed.forEach((x, j) => (picks[start + j] = x));
+                return;
+              }
+            } catch (e) {
+              friendlyError(e); // 로그만 남기고, 아래에서 문장 틀로 만든다
+              return;
+            }
+          }
+        }),
+      );
     }
 
     const cards: PlanCard[] = points.map((p, i) => {
       const list = nearby[i];
-      const pick = picks?.[i];
+      const pick = picks[i];
       // AI가 고른 이름을 실제 가게 목록과 맞춘다 (목록에 없는 이름은 버린다)
       const destName = end!.name.replace(/^\(시험\)\s*/, "").replace(/\[.*?\]/g, "").trim();
       if (p.action === "arrive") {
@@ -108,9 +124,9 @@ export async function POST(req: Request) {
     });
 
     // 4. 가게 건물 정보가 없는 카드(도착, 후보 없음, TMAP 이름만 있는 곳)는 그 지점의 건물 이름과 번지를 찾는다
-    if (hasTmap()) {
+    if (hasTmap() && Date.now() - t0 < BUDGET_ADDR_MS) {
       const need = cards.map((c, i) => (c.place ? -1 : i)).filter((i) => i >= 0);
-      for (let k = 0; k < need.length; k += 4) {
+      for (let k = 0; k < need.length && Date.now() - t0 < BUDGET_ADDR_MS + 6000; k += 4) {
         await Promise.all(
           need.slice(k, k + 4).map(async (i) => {
             try {

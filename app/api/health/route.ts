@@ -140,10 +140,28 @@ export async function GET(req: Request) {
       new Request("http://local/api/plan-route", {
         method: "POST",
         headers: { "content-type": "application/json", "x-device-id": "health-check" },
-        body: JSON.stringify({ start: NEAR, end: { ...DAEJEON_STATION, name: "대전역" } }),
+        // plan=far: 대전역 근처 → 대전시청 (긴 길에서 카드가 20장을 넘는지)
+        body: JSON.stringify(
+          url.searchParams.get("plan") === "far"
+            ? { start: NEAR, end: { lat: 36.3504, lng: 127.3846, name: "대전광역시청" } }
+            : { start: NEAR, end: { ...DAEJEON_STATION, name: "대전역" } },
+        ),
       }),
     );
-    return Response.json({ status: r.status, plan: await r.json() });
+    const t = Date.now();
+    const plan = (await r.json()) as { cards?: { order: number; instruction: string; candidates: unknown[]; place?: unknown }[]; totalDistance?: number };
+    if (url.searchParams.get("plan") === "far")
+      return Response.json({
+        status: r.status,
+        ms: Date.now() - t,
+        distance: plan.totalDistance,
+        cards: plan.cards?.length,
+        withLandmark: plan.cards?.filter((c) => c.candidates.length).length,
+        withPlace: plan.cards?.filter((c) => c.place).length,
+        sample: plan.cards?.map((c) => c.instruction),
+        trace: aiTrace.slice(-8),
+      });
+    return Response.json({ status: r.status, plan });
   }
 
   const [places, route, stores, gemini, geminiLite] = await Promise.all([

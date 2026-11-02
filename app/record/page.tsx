@@ -10,10 +10,7 @@ import { db, getPhoto, newId, savePhoto } from "@/lib/db";
 import { blobToPayload, shrinkPhoto } from "@/lib/image";
 import { saveSettings, useSettings } from "@/lib/settings";
 import { toast } from "@/lib/toast";
-import type { Card, Junction, Route } from "@/types";
-
-const MAX_JUNCTIONS = 20;
-
+import type { Card, CardDraft, Junction, Route } from "@/types";
 
 // 도착 화면에서 '돌아오는 길도 등록하기'를 누르면 이름을 미리 채워 둔다
 let prefillCache: string | null = null;
@@ -44,6 +41,7 @@ export default function RecordPage() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [aiWorking, setAiWorking] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null); // 갈림길이 많을 때 몇 곳까지 보냈는지
   const [error, setError] = useState<string | null>(null);
   const settings = useSettings();
   const showNotice = settings ? !settings.seenPhotoNotice : false;
@@ -117,29 +115,48 @@ export default function RecordPage() {
     setError(null);
     setAiWorking(true);
     const routeId = newId();
-    let cards: Card[];
-    try {
-      const payload = await Promise.all(
-        junctions.map(async (j) => ({ photo: await blobToPayload((await getPhoto(j.photoId))!), note: j.note })),
-      );
-      const res = await requestCards(payload); // 갈림길마다 부르지 않고 한 번만 부른다
-      cards = res.cards.map((d, i) => ({
-        id: newId(),
-        order: i + 1,
-        photoId: junctions[i].photoId,
-        photoDescription: d.photoDescription,
-        landmark: d.landmark,
-        action: d.action,
-        instruction: d.instruction,
-        userNote: junctions[i].note,
-        warning: d.warning,
-        lat: junctions[i].lat,
-        lng: junctions[i].lng,
-      }));
-    } catch (e) {
+    // 갈림길 수에는 상한이 없다. 사진이 많으면 요청 하나가 너무 커지므로 8장씩 나눠 차례로 보낸다.
+    // 어느 묶음이 실패해도 그 묶음만 메모로 카드를 만들고 나머지는 AI 카드를 쓴다.
+    const BATCH = 8;
+    const drafts: (CardDraft | null)[] = new Array(junctions.length).fill(null);
+    let failMessage: string | null = null;
+    for (let k = 0; k < junctions.length; k += BATCH) {
+      const part = junctions.slice(k, k + BATCH);
+      setProgress(junctions.length > BATCH ? `${Math.min(k + BATCH, junctions.length)}/${junctions.length}곳` : null);
+      try {
+        const payload = await Promise.all(part.map(async (j) => ({ photo: await blobToPayload((await getPhoto(j.photoId))!), note: j.note })));
+        const res = await requestCards(payload, { startOrder: k + 1, final: k + BATCH >= junctions.length });
+        res.cards.forEach((d, j) => (drafts[k + j] = d));
+      } catch (e) {
+        failMessage ??= (e as Error).message;
+        // 하루 횟수를 다 쓴 경우는 다음 묶음도 안 되므로 멈춘다
+        if (/횟수/.test(failMessage)) break;
+      }
+    }
+    setProgress(null);
+    if (failMessage) {
       // AI가 안 될 때도 등록이 끊기지 않게, 메모로 카드를 만들고 확인 화면에서 고치게 한다.
-      toast(`${firstSentence((e as Error).message)} 대신 메모로 카드를 만들었어요. 확인 화면에서 고쳐 주세요.`);
-      cards = junctions.map((j, i) => ({
+      const all = drafts.every((d) => !d);
+      toast(`${firstSentence(failMessage)} ${all ? "대신" : "일부는"} 메모로 카드를 만들었어요. 확인 화면에서 고쳐 주세요.`);
+    }
+    const cards: Card[] = junctions.map((j, i) => {
+      const d = drafts[i];
+      if (d) {
+        return {
+          id: newId(),
+          order: i + 1,
+          photoId: j.photoId,
+          photoDescription: d.photoDescription,
+          landmark: d.landmark,
+          action: i === junctions.length - 1 && d.action !== "arrive" ? "arrive" : d.action,
+          instruction: d.instruction,
+          userNote: j.note,
+          warning: d.warning,
+          lat: j.lat,
+          lng: j.lng,
+        };
+      }
+      return {
         id: newId(),
         order: i + 1,
         photoId: j.photoId,
@@ -151,8 +168,8 @@ export default function RecordPage() {
         warning: null,
         lat: j.lat,
         lng: j.lng,
-      }));
-    }
+      };
+    });
     const route: Route = {
       id: routeId,
       name: name.trim(),
@@ -216,8 +233,8 @@ export default function RecordPage() {
         <AppBar title={`새 길 등록 · ${name}`} />
         <div className="body">
           <AiWaiting
-            title="안내 카드 만드는 중"
-            hint="10~30초 걸려요. 화면을 끄지 마세요."
+            title={progress ? `안내 카드 만드는 중 · ${progress}` : "안내 카드 만드는 중"}
+            hint={junctions.length > 8 ? "갈림길이 많아서 나눠 보내요. 1분쯤 걸릴 수 있어요. 화면을 끄지 마세요." : "10~30초 걸려요. 화면을 끄지 마세요."}
             photoId={junctions.at(-1)?.photoId}
             steps={[
               `사진 ${junctions.length}장 보내는 중`,
@@ -297,16 +314,13 @@ export default function RecordPage() {
         <button
           className="btn btn-filled btn-large"
           onClick={addJunction}
-          disabled={!pendingPhoto || !!busy || junctions.length >= MAX_JUNCTIONS}
+          disabled={!pendingPhoto || !!busy}
         >
           여기서 꺾어요
         </button>
         <button className="btn btn-outlined" onClick={finish} disabled={!!busy || junctions.length === 0}>
           도착했어요
         </button>
-        {junctions.length >= MAX_JUNCTIONS && (
-          <p className="body-medium muted">갈림길은 {MAX_JUNCTIONS}곳까지 등록할 수 있어요.</p>
-        )}
       </div>
     </main>
   );
