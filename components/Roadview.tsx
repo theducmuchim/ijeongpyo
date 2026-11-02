@@ -15,30 +15,53 @@ declare global {
 }
 
 let loading: Promise<void> | null = null;
-function loadSdk(): Promise<void> {
-  if (window.kakao?.maps?.Roadview) return Promise.resolve();
-  loading ??= new Promise<void>((resolve, reject) => {
+function addScript(src: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KEY}&autoload=false`;
-    s.onload = () => window.kakao.maps.load(() => resolve());
+    s.src = src;
+    s.onload = () => {
+      if (!window.kakao?.maps?.load) return reject(new Error("카카오 지도 파일 내용이 이상해요 (설정이 꺼져 있을 수 있어요)"));
+      window.kakao.maps.load(() => resolve());
+    };
     s.onerror = () => {
-      loading = null;
-      reject(new Error("카카오 지도를 불러오지 못했어요"));
+      s.remove();
+      reject(new Error("카카오 지도 파일을 받지 못했어요"));
     };
     document.head.appendChild(s);
   });
+}
+function loadSdk(): Promise<void> {
+  if (window.kakao?.maps?.Roadview) return Promise.resolve();
+  const base = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KEY}&autoload=false`;
+  // 예전에 받은 오류 응답(설정이 꺼져 있던 때)이 휴대폰에 저장돼 있을 수 있어, 실패하면 저장본을 피해서 한 번 더 받는다
+  loading ??= addScript(base)
+    .catch(() => addScript(`${base}&t=${Date.now()}`))
+    .catch((e) => {
+      loading = null;
+      throw e;
+    });
   return loading;
 }
 
 type State = "loading" | "ok" | "none" | "error";
+const TIMEOUT_MS = 12000;
 
 export function Roadview({ lat, lng, heading }: { lat: number; lng: number; heading?: number }) {
   const box = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<State>("loading");
+  const [why, setWhy] = useState("");
 
   useEffect(() => {
     if (!KEY) return;
     let alive = true;
+    const fail = (e: unknown) => {
+      if (!alive) return;
+      const msg = String((e as Error)?.message ?? e);
+      console.error("[roadview]", msg);
+      setWhy(msg);
+      setState("error");
+    };
+    const timer = setTimeout(() => fail(new Error("응답이 너무 늦어요")), TIMEOUT_MS);
     loadSdk()
       .then(() => {
         if (!alive || !box.current) return;
@@ -47,23 +70,36 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
         const pos = new k.LatLng(lat, lng);
         new k.RoadviewClient().getNearestPanoId(pos, 50, (panoId: number | null) => {
           if (!alive) return;
-          if (!panoId) return setState("none");
-          if (heading !== undefined) {
-            k.event.addListener(rv, "init", () => {
+          if (!panoId) {
+            clearTimeout(timer);
+            return setState("none");
+          }
+          k.event.addListener(rv, "init", () => {
+            clearTimeout(timer);
+            if (heading !== undefined) {
               try {
                 rv.setViewpoint({ pan: heading, tilt: 0, zoom: 0 });
               } catch {
                 // 시점을 못 돌려도 로드뷰는 그대로 보인다
               }
-            });
+            }
+            if (alive) setState("ok");
+          });
+          try {
+            rv.setPanoId(panoId, pos);
+          } catch (e) {
+            clearTimeout(timer);
+            fail(e);
           }
-          rv.setPanoId(panoId, pos);
-          setState("ok");
         });
       })
-      .catch(() => alive && setState("error"));
+      .catch((e) => {
+        clearTimeout(timer);
+        fail(e);
+      });
     return () => {
       alive = false;
+      clearTimeout(timer);
     };
   }, [lat, lng, heading]);
 
@@ -79,7 +115,7 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
       <div ref={box} className="roadview" aria-label="로드뷰" />
       {state !== "ok" && (
         <div className="roadview-msg body-medium muted">
-          {state === "loading" ? "로드뷰 불러오는 중…" : state === "none" ? "이 지점은 로드뷰가 없어요." : "로드뷰를 불러오지 못했어요."}
+          {state === "loading" ? "로드뷰 불러오는 중…" : state === "none" ? "이 지점은 로드뷰가 없어요." : `로드뷰를 불러오지 못했어요. (${why})`}
         </div>
       )}
       <p className="label-medium muted" style={{ marginTop: 6 }}>
