@@ -19,7 +19,7 @@ let client: GoogleGenAI | null = null;
 // 다시 부르기는 끄고 한 번에 20초까지만 기다린다. 한도에 걸리면 아래에서 lite 모델로 바꿔 부른다.
 const getClient = () => (client ??= new GoogleGenAI({ apiKey: API_KEY, httpOptions: { timeout: 20000, retryOptions: { attempts: 1 } } }));
 
-const switchable = (e: unknown) => /429|RESOURCE_EXHAUSTED|quota|404|NOT_FOUND|timeout|timed out|abort|deadline/i.test(String((e as Error)?.message ?? e));
+const switchable = (e: unknown) => /429|RESOURCE_EXHAUSTED|quota|404|NOT_FOUND|500|503|UNAVAILABLE|INTERNAL|high demand|timeout|timed out|abort|deadline/i.test(String((e as Error)?.message ?? e));
 
 export async function askAI(system: string, images: ImagePayload[], text: string, opts: { lite?: boolean } = {}): Promise<string> {
   if (opts.lite || MODEL === LITE_MODEL) return callModel(LITE_MODEL, system, images, text);
