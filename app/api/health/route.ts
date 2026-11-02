@@ -1,6 +1,7 @@
 import { askAI, isMockMode } from "@/lib/ai";
 import { hasStores, rankForLandmark, storesNear } from "@/lib/stores";
 import { hasTmap, pedestrianRoute, searchPlaces } from "@/lib/tmap";
+import { POST as checkLandmark } from "../check-landmark/route";
 import { POST as planRoute } from "../plan-route/route";
 
 // 바깥 서비스 점검용. 키 값은 절대 돌려주지 않는다.
@@ -26,6 +27,21 @@ export async function GET(req: Request) {
   const token = url.searchParams.get("token");
   const keys = { gemini: !isMockMode(), tmap: hasTmap(), stores: hasStores(), kakaoJs: !!process.env.NEXT_PUBLIC_KAKAO_JS_KEY };
   if (!process.env.HEALTH_TOKEN || token !== process.env.HEALTH_TOKEN) return Response.json({ keys });
+
+  // ?check=1: 체험용 사진(온누리약국 간판이 있는 그림)으로 사진 확인을 실제로 한 번 해 본다
+  if (url.searchParams.get("check")) {
+    const img = await fetch("https://ijeongpyo-one.vercel.app/demo/demo-2.jpg", { cache: "no-store" });
+    const base64 = Buffer.from(await img.arrayBuffer()).toString("base64");
+    const t = Date.now();
+    const r = await checkLandmark(
+      new Request("http://local/api/check-landmark", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-device-id": "health-check" },
+        body: JSON.stringify({ photo: { base64, mediaType: "image/jpeg" }, expected: "온누리약국", candidates: ["하늘편의점"], action: "right", instruction: "온누리약국에서 오른쪽으로 가세요" }),
+      }),
+    );
+    return Response.json({ status: r.status, ms: Date.now() - t, imageBytes: base64.length, check: await r.json() });
+  }
 
   // ?plan=1: 카드 초안을 실제로 한 번 만들어 본다 (대전역 근처 → 대전역)
   if (url.searchParams.get("plan")) {
