@@ -109,6 +109,20 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
           };
           window.addEventListener("resize", onResize);
           cleanups.push(() => window.removeEventListener("resize", onResize));
+          // 망이 느려 사진이 늦게 오면 위의 시간표를 넘길 수 있어서, 거리 사진이 들어올 때마다도 다시 그린다
+          if (box.current) {
+            const seen = new WeakSet<HTMLImageElement>();
+            const hook = () =>
+              box.current?.querySelectorAll("img").forEach((img) => {
+                if (seen.has(img)) return;
+                seen.add(img);
+                img.addEventListener("load", onResize);
+              });
+            const mo = new MutationObserver(hook);
+            mo.observe(box.current, { subtree: true, childList: true, attributes: true, attributeFilter: ["src"] });
+            hook();
+            cleanups.push(() => mo.disconnect());
+          }
         });
       })
       .catch((e) => {
