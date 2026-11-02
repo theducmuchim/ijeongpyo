@@ -5,7 +5,7 @@ import { checkLimit } from "@/lib/rateLimit";
 import { FALLBACK, askWhereAmI, type CardText } from "@/lib/whereAmI";
 import type { ImagePayload, WhereAmIResult } from "@/types";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 type Body = { photos: ImagePayload[]; cards: CardText[]; lastCardOrder: number; gps?: { lat: number; lng: number } | null };
 

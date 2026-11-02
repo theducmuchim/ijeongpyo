@@ -4,7 +4,7 @@ import { checkLimit } from "@/lib/rateLimit";
 import { parseCheck } from "@/lib/schemas";
 import type { Action, CheckResult, ImagePayload } from "@/types";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 type Body = { photo?: ImagePayload; expected?: string | null; candidates?: string[]; action?: Action; instruction?: string };
 

@@ -4,7 +4,7 @@ import { checkLimit } from "@/lib/rateLimit";
 import { parseReplace } from "@/lib/schemas";
 import type { Action, ImagePayload, ReplaceResult, Side } from "@/types";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 // 2차 기능: 없어진 길잡이를 새 사진으로 바꾼다. 꺾는 방향(action)은 바꾸지 않는다.
 type Body = {

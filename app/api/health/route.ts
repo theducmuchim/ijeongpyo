@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   const keys = { gemini: !isMockMode(), tmap: hasTmap(), stores: hasStores(), kakaoJs: !!process.env.NEXT_PUBLIC_KAKAO_JS_KEY };
   if (!process.env.HEALTH_TOKEN || token !== process.env.HEALTH_TOKEN) return Response.json({ keys });
 
-  const [places, route, stores, gemini] = await Promise.all([
+  const [places, route, stores, gemini, geminiLite] = await Promise.all([
     probe(async () => {
       const r = await searchPlaces("대전역", DAEJEON_STATION.lat, DAEJEON_STATION.lng);
       return { count: r.length, first: r.slice(0, 3) };
@@ -39,7 +39,7 @@ export async function GET(req: Request) {
       return { count: r.length, ranked: rankForLandmark(r, 6) };
     }),
     probe(async () => (await askAI("JSON으로만 답한다.", [], '{"ok":true}를 그대로 출력해.')).slice(0, 200)),
+    probe(async () => (await askAI("JSON으로만 답한다.", [], '{"ok":true}를 그대로 출력해.', { lite: true })).slice(0, 200)),
   ]);
-  const geminiLite = await probe(async () => (await askAI("JSON으로만 답한다.", [], '{"ok":true}를 그대로 출력해.', { lite: true })).slice(0, 200));
   return Response.json({ keys, places, route, stores, gemini, geminiLite });
 }

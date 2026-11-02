@@ -15,9 +15,11 @@ const LITE_MODEL = process.env.GEMINI_LITE_MODEL || "gemini-3.5-flash-lite";
 export const isMockMode = () => !API_KEY;
 
 let client: GoogleGenAI | null = null;
-const getClient = () => (client ??= new GoogleGenAI({ apiKey: API_KEY }));
+// SDK는 기본으로 429에서 최대 5번, 길게는 1분씩 기다리며 다시 부른다. 그러면 서버 시간 제한(60초)을 넘겨 버리므로
+// 다시 부르기는 끄고 한 번에 20초까지만 기다린다. 한도에 걸리면 아래에서 lite 모델로 바꿔 부른다.
+const getClient = () => (client ??= new GoogleGenAI({ apiKey: API_KEY, httpOptions: { timeout: 20000, retryOptions: { attempts: 1 } } }));
 
-const switchable = (e: unknown) => /429|RESOURCE_EXHAUSTED|quota|404|NOT_FOUND/i.test(String((e as Error)?.message ?? e));
+const switchable = (e: unknown) => /429|RESOURCE_EXHAUSTED|quota|404|NOT_FOUND|timeout|timed out|abort|deadline/i.test(String((e as Error)?.message ?? e));
 
 export async function askAI(system: string, images: ImagePayload[], text: string, opts: { lite?: boolean } = {}): Promise<string> {
   if (opts.lite || MODEL === LITE_MODEL) return callModel(LITE_MODEL, system, images, text);
