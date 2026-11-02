@@ -70,7 +70,7 @@ async function main() {
   // 키를 읽은 뒤에 불러와야 lib/ai.ts가 키를 본다
   const { askWhereAmI } = await import("@/lib/whereAmI");
   const { WHERE_AM_I_PROMPT } = await import("@/lib/prompts");
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
   const promptId = createHash("sha1").update(WHERE_AM_I_PROMPT).digest("hex").slice(0, 7);
 
   console.log(`\n이정표 AI 평가 · 사진 ${rows.length}건 · 모델 ${model} · 지시문 ${promptId}`);

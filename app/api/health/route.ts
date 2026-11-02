@@ -40,5 +40,6 @@ export async function GET(req: Request) {
     }),
     probe(async () => (await askAI("JSON으로만 답한다.", [], '{"ok":true}를 그대로 출력해.')).slice(0, 200)),
   ]);
-  return Response.json({ keys, places, route, stores, gemini });
+  const geminiLite = await probe(async () => (await askAI("JSON으로만 답한다.", [], '{"ok":true}를 그대로 출력해.', { lite: true })).slice(0, 200));
+  return Response.json({ keys, places, route, stores, gemini, geminiLite });
 }

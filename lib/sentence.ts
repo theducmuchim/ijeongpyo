@@ -11,6 +11,10 @@ const ACTION_WORDS: Record<Action, string> = {
 
 export function sentenceFor(name: string | null, action: Action, crossing = false): string {
   if (crossing && action === "straight") return name ? `${name} 앞 횡단보도를 건너세요` : "횡단보도를 건너세요";
+  if (crossing && (action === "left" || action === "right")) {
+    const dir = action === "left" ? "왼쪽" : "오른쪽";
+    return name ? `${name}에서 ${dir}으로 가서 횡단보도를 건너세요` : `여기서 ${dir}으로 가서 횡단보도를 건너세요`;
+  }
   if (!name) return action === "arrive" ? "여기가 도착 지점이에요" : `여기서 ${ACTION_WORDS[action]}`;
   if (action === "arrive") return `${josa(name, "이/가")} 보이면 도착이에요`;
   if (action === "straight") return `${josa(name, "을/를")} 지나 곧장 가세요`;

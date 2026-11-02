@@ -18,7 +18,7 @@ export function nextCandidate(card: Card): Card {
     ...card,
     candidates: rest,
     landmark: { name: name ?? "", side: card.landmark.side },
-    instruction: sentenceFor(name, card.action),
+    instruction: sentenceFor(name, card.action, /횡단보도/.test(card.instruction)),
   };
 }
 

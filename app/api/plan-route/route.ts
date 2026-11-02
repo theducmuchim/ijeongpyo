@@ -50,7 +50,11 @@ export async function POST(req: Request) {
         try {
           let list = await storesNear(p.lat, p.lng, 40);
           if (list.length === 0) list = await storesNear(p.lat, p.lng, 80);
-          return rankForLandmark(list, 6);
+          const ranked = rankForLandmark(list, 6);
+          // TMAP이 그 지점 안내에 쓴 이름(예: "대전역 3번출구", "역전약국")은 실제로 보이는 것일 가능성이 높아 맨 앞에 둔다
+          const poi = p.action === "arrive" ? "" : p.nearPoiName;
+          if (poi && !ranked.some((s) => s.name === poi)) ranked.unshift({ name: poi, category: "TMAP 안내 지점", lat: p.lat, lng: p.lng, dist: 0 });
+          return ranked;
         } catch (e) {
           console.error("[plan-route] 상가정보", String((e as Error).message).slice(0, 200));
           return [];
@@ -68,8 +72,13 @@ export async function POST(req: Request) {
         })
         .join("\n");
       for (let t = 0; t < 2 && !picks; t++) {
-        const raw = await askAI(PLAN_ROUTE_PROMPT, [], `도착지: ${end!.name}\n${text}`);
-        picks = parsePlan(raw, points.length);
+        try {
+          const raw = await askAI(PLAN_ROUTE_PROMPT, [], `도착지: ${end!.name}\n${text}`, { lite: true });
+          picks = parsePlan(raw, points.length);
+        } catch (e) {
+          friendlyError(e); // 로그만 남기고, 아래에서 문장 틀로 만든다
+          break;
+        }
       }
     }
 

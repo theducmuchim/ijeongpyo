@@ -5,8 +5,11 @@ import type { ImagePayload } from "@/types";
 // AI를 부르는 코드는 이 파일에만 둔다. 다른 AI로 바꿀 때 여기만 고치면 된다.
 // 키는 Vercel 환경변수에만 둔다. 화면 코드에는 절대 넣지 않는다.
 const API_KEY = process.env.GEMINI_API_KEY;
-// 무료로 쓸 수 있는 모델은 자주 바뀐다. AI Studio에서 '무료'로 표시된 Flash 모델 이름을 넣는다.
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+// 무료로 쓸 수 있는 모델은 자주 바뀐다. AI Studio에서 '무료'로 표시된 모델 이름을 넣는다.
+// 2.5 모델은 새 키로는 쓸 수 없다(404). 무료 한도: Flash 하루 20번, Flash-Lite 하루 500번 정도 (프로젝트 전체).
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+// Flash 한도를 다 쓰거나 모델이 없어지면 이 모델로 한 번 더 부른다. 글만 보내는 일(카드 초안)은 처음부터 이걸 쓴다.
+const LITE_MODEL = process.env.GEMINI_LITE_MODEL || "gemini-3.5-flash-lite";
 
 // 키가 없으면 시험 모드: AI를 부르지 않고 예시 답을 돌려준다(화면 흐름 점검용).
 export const isMockMode = () => !API_KEY;
@@ -14,9 +17,22 @@ export const isMockMode = () => !API_KEY;
 let client: GoogleGenAI | null = null;
 const getClient = () => (client ??= new GoogleGenAI({ apiKey: API_KEY }));
 
-export async function askAI(system: string, images: ImagePayload[], text: string): Promise<string> {
+const switchable = (e: unknown) => /429|RESOURCE_EXHAUSTED|quota|404|NOT_FOUND/i.test(String((e as Error)?.message ?? e));
+
+export async function askAI(system: string, images: ImagePayload[], text: string, opts: { lite?: boolean } = {}): Promise<string> {
+  if (opts.lite || MODEL === LITE_MODEL) return callModel(LITE_MODEL, system, images, text);
+  try {
+    return await callModel(MODEL, system, images, text);
+  } catch (e) {
+    if (!switchable(e)) throw e;
+    console.error(`[ai] ${MODEL} 실패, ${LITE_MODEL}로 다시: ${String((e as Error).message).slice(0, 160)}`);
+    return callModel(LITE_MODEL, system, images, text);
+  }
+}
+
+async function callModel(model: string, system: string, images: ImagePayload[], text: string): Promise<string> {
   const res = await getClient().models.generateContent({
-    model: MODEL,
+    model,
     contents: [
       {
         role: "user",

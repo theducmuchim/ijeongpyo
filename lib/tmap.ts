@@ -11,6 +11,46 @@ export const hasTmap = () => !!KEY;
 type Json = Record<string, unknown>;
 const num = (v: unknown) => (v === undefined || v === null || v === "" ? NaN : Number(v));
 const str = (v: unknown) => (typeof v === "string" ? v : v === undefined || v === null ? "" : String(v));
+// 도착 지점 nearPoiName은 보낸 이름이 인코딩된 채로 돌아온다 ("%EB%8C%80...")
+const decode = (s: string) => {
+  if (!/%[0-9A-F]{2}/i.test(s)) return s;
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+};
+
+function meters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371000;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+// 실제 응답을 보니 꺾는 곳과 횡단보도가 20m 간격으로 붙어 나오는 일이 많다.
+// 카드가 너무 촘촘하면 자동 넘김(30m)이 꼬이고 읽기도 바쁘다. 횡단보도가 낀 두 지점이 가까우면 한 장으로 합친다.
+export const MERGE_M = 25;
+function mergeClose(points: TurnPoint[]): TurnPoint[] {
+  const out: TurnPoint[] = [];
+  for (const p of points) {
+    const prev = out.at(-1);
+    const oneIsCrossing = prev && ((prev.action === "straight" && prev.crossing) || (p.action === "straight" && p.crossing));
+    if (prev && p.action !== "arrive" && oneIsCrossing && meters(prev, p) < MERGE_M) {
+      out[out.length - 1] = {
+        ...prev, // 먼저 닿는 자리를 카드 위치로 둔다
+        action: prev.action === "straight" ? p.action : prev.action,
+        crossing: true,
+        description: `${prev.description} / ${p.description}`,
+        nearPoiName: prev.nearPoiName || p.nearPoiName,
+      };
+      continue;
+    }
+    out.push(p);
+  }
+  return out;
+}
 
 export async function searchPlaces(q: string, lat?: number, lng?: number): Promise<Place[]> {
   const p = new URLSearchParams({ version: "1", searchKeyword: q, count: "8", reqCoordType: "WGS84GEO", resCoordType: "WGS84GEO" });
@@ -94,11 +134,11 @@ export async function pedestrianRoute(start: { lat: number; lng: number }, end: 
       const description = str(pr.description);
       const kind = classify(num(pr.turnType), description);
       if (!kind || kind === "start") continue;
-      points.push({ lat, lng, action: kind.action, crossing: kind.crossing, description, nearPoiName: str(pr.nearPoiName) });
+      points.push({ lat, lng, action: kind.action, crossing: kind.crossing, description, nearPoiName: decode(str(pr.nearPoiName)) });
     }
   }
   if (points.length === 0 || points.at(-1)!.action !== "arrive") {
     points.push({ lat: end.lat, lng: end.lng, action: "arrive", crossing: false, description: "도착", nearPoiName: end.name });
   }
-  return { points, track, totalDistance, totalTime };
+  return { points: mergeClose(points), track, totalDistance, totalTime };
 }
