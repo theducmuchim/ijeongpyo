@@ -11,12 +11,12 @@ import { type Command, PLAN_QUERY_KEY, destFrom, speak, squash } from "@/lib/voi
 import type { Route } from "@/types";
 
 const HOME_COMMANDS: Command[] = [
-  { id: "/record", say: ["새 길", "길 등록", "등록"] },
-  { id: "/plan", say: ["처음 가는 길", "처음 가는"] },
-  { id: "/settings", say: ["설정"] },
-  { id: "/guide", say: ["설명서", "도움말", "쓰는 법"] },
-  { id: "/demo", say: ["체험"] },
-  { id: "/intro", say: ["소개"] },
+  { id: "/record", label: "새 길 등록", say: ["새 길", "길 등록", "등록"] },
+  { id: "/plan", label: "처음 가는 길", say: ["처음 가는 길", "처음 가는"] },
+  { id: "/settings", label: "설정", say: ["설정"] },
+  { id: "/guide", label: "설명서", say: ["설명서", "도움말", "쓰는 법"] },
+  { id: "/demo", label: "체험하기", say: ["체험"] },
+  { id: "/intro", label: "소개 사이트", say: ["소개"] },
 ];
 
 // 홈: Figma "Schedule Management Platform (2019)"의 Homescreen 구성을 따른다.

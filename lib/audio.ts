@@ -92,7 +92,17 @@ export async function recordUtterance(opts: RecordOpts = {}): Promise<string> {
     stopCurrent = () => finish(speechAt ? undefined : "no-speech");
     opts.signal?.addEventListener("abort", () => finish("aborted"));
 
+    // 소리가 하나도 안 들어오면(오디오가 잠든 경우) 깨워 보고, 그래도 안 되면 알린다
+    let frames = 0;
+    setTimeout(() => {
+      if (!frames && !finished) c.resume().catch(() => {});
+    }, 800);
+    setTimeout(() => {
+      if (!frames && !finished) finish("audio-capture");
+    }, 3000);
+
     proc.onaudioprocess = (e) => {
+      frames++;
       const data = new Float32Array(e.inputBuffer.getChannelData(0));
       const now = performance.now() - started;
       let sum = 0;

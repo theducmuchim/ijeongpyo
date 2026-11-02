@@ -46,10 +46,12 @@ export function speak(text: string, opts: SpeakOpts = {}) {
   chain = chain
     .then(async () => {
       if (my !== gen) return;
+      // 방금 마이크를 썼으면 휴대폰이 소리 내기로 돌아올 때까지 잠깐 기다린다
+      const wait = 500 - (Date.now() - listenEndedAt);
+      if (wait > 0) await sleep(wait);
       const buf = await audio;
       if (my !== gen) return;
-      if (buf) await playBuffer(buf);
-      else await deviceSpeak(text);
+      if (!(buf && (await playBuffer(buf)))) await deviceSpeak(text);
     })
     .catch(() => {})
     .finally(() => {
@@ -94,11 +96,24 @@ function deviceSpeak(text: string): Promise<void> {
   });
 }
 
-function playBuffer(buf: AudioBuffer): Promise<void> {
+let listenEndedAt = 0;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// 아이폰·아이패드는 마이크를 쓴 직후나 화면을 누르기 전에는 오디오가 멈춰 있어 소리가 안 난다.
+// 깨워 보고 그래도 안 되면 false를 돌려 휴대폰 목소리로 말하게 한다.
+async function audioReady(): Promise<boolean> {
+  const c = audioCtx();
+  if (!c) return false;
+  if (c.state === "running") return true;
+  unlockAudio();
+  await Promise.race([c.resume().catch(() => {}), sleep(400)]);
+  return (c.state as string) === "running";
+}
+
+async function playBuffer(buf: AudioBuffer): Promise<boolean> {
+  if (!(await audioReady())) return false;
   return new Promise((resolve) => {
-    const c = audioCtx();
-    if (!c) return resolve();
-    unlockAudio();
+    const c = audioCtx()!;
     const src = c.createBufferSource();
     src.buffer = buf;
     src.connect(c.destination);
@@ -106,7 +121,7 @@ function playBuffer(buf: AudioBuffer): Promise<void> {
     const done = () => {
       clearTimeout(timer);
       if (playing === src) playing = null;
-      resolve();
+      resolve(true);
     };
     const timer = setTimeout(done, buf.duration * 1000 + 1500);
     src.onended = done;
@@ -241,7 +256,7 @@ export function listenError(code: string): string {
   if (code === "not-allowed" || code === "service-not-allowed") return "마이크를 쓸 수 없어요. 휴대폰 설정에서 이 브라우저의 마이크를 허용해 주세요.";
   if (code === "no-speech") return "말소리가 들리지 않았어요. 버튼을 누르고 바로 말해 주세요.";
   if (code === "network") return "음성 인식에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.";
-  if (code === "audio-capture") return "마이크를 찾지 못했어요.";
+  if (code === "audio-capture") return "마이크 소리가 들어오지 않아요. 화면을 한 번 누르고 다시 해 주세요.";
   if (code === "quota") return "오늘 말로 하기를 많이 써서 잠시 쉬어요. 버튼을 눌러 주세요.";
   return "말을 알아듣지 못했어요. 다시 말해 주세요.";
 }
@@ -251,22 +266,59 @@ const altsOf = (r: RecResult) => Array.from({ length: r.length }, (_, i) => r[i]
 let current: Rec | null = null; // 한 번에 하나만 듣는다
 
 export type ListenPhase = "listening" | "thinking";
-type ListenOpts = { onInterim?: (text: string) => void; onPhase?: (p: ListenPhase) => void; onLevel?: (l: number) => void; hints?: string[] };
+type ListenOpts = {
+  onInterim?: (text: string) => void;
+  onPhase?: (p: ListenPhase) => void;
+  onLevel?: (l: number) => void;
+  hints?: string[];
+  fresh?: boolean; // 방금 권한을 허용했다 (이번 실패만으로 음성 인식이 고장 났다고 보지 않는다)
+};
+
+/* 말로 하기 기록: 무엇을 들었고 무엇을 했는지 (설정 화면에서 문제를 찾을 때 본다). 이 휴대폰에만 20개까지. */
+export type VoiceLogItem = { at: string; how: "인식" | "녹음" | "-"; heard?: string; did?: string; error?: string };
+const LOG_KEY = "ijeongpyo.voiceLog";
+let lastHow: VoiceLogItem["how"] = "-";
+export function voiceLog(item: Omit<VoiceLogItem, "at" | "how">) {
+  try {
+    const list: VoiceLogItem[] = JSON.parse(localStorage.getItem(LOG_KEY) || "[]");
+    list.unshift({ at: new Date().toISOString(), how: lastHow, ...item });
+    localStorage.setItem(LOG_KEY, JSON.stringify(list.slice(0, 20)));
+  } catch {}
+}
+export function readVoiceLog(): VoiceLogItem[] {
+  try {
+    return JSON.parse(localStorage.getItem(LOG_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
 
 /** 한 번 듣고 끝낸다. 알아들은 말 후보(가장 그럴듯한 것부터)를 돌려준다. */
 export async function listenOnce(opts: ListenOpts = {}): Promise<string[]> {
+  try {
+    return await listenOnceInner(opts);
+  } finally {
+    listenEndedAt = Date.now();
+  }
+}
+
+async function listenOnceInner(opts: ListenOpts): Promise<string[]> {
   stopSpeaking();
   unlockAudio();
   if (hasNative()) {
     try {
+      lastHow = "인식";
       return await listenNative(opts.onInterim);
     } catch (e) {
       const code = (e as { code?: string }).code ?? "";
-      // 말이 없었거나 마이크를 막은 경우는 그대로 알린다. 그 밖에는 이 브라우저의 음성 인식이 고장 난 것으로 보고 녹음으로 넘어간다.
-      if (code === "no-speech" || code === "not-allowed") throw new Error(listenError(code));
-      markNativeBroken();
+      voiceLog({ error: `브라우저 음성 인식: ${code}` });
+      // 말이 없었던 경우는 그대로 알린다. 그 밖에는 이 브라우저의 음성 인식이 안 되는 것으로 보고 녹음으로 넘어간다.
+      // (아이폰·아이패드는 처음에 '음성 인식' 권한 창을 띄우면서 바로 끝나 버리므로, 방금 허용한 경우는 고장으로 치지 않는다)
+      if (code === "no-speech") throw new Error(listenError(code));
+      if (!opts.fresh) markNativeBroken();
     }
   }
+  lastHow = "녹음";
   if (!canRecord()) throw new Error("이 브라우저에서는 말로 하기를 쓸 수 없어요. 직접 눌러 주세요.");
   opts.onPhase?.("listening");
   let wav: string;
@@ -284,6 +336,7 @@ export async function listenOnce(opts: ListenOpts = {}): Promise<string[]> {
   if (res.status === 429) throw new Error(listenError("quota"));
   if (!res.ok) throw new Error(listenError("network"));
   const { text } = (await res.json()) as { text?: string };
+  voiceLog({ heard: text || "(빈 말)" });
   if (!text?.trim()) throw new Error(listenError("no-speech"));
   return [text.trim()];
 }
@@ -300,32 +353,58 @@ function listenNative(onInterim?: (text: string) => void): Promise<string[]> {
     current?.abort();
     current = rec;
     rec.continuous = false;
-    rec.interimResults = !!onInterim;
+    // 아이폰·아이패드는 '끝난 말'(isFinal)을 끝내 주지 않고 중간 결과만 주는 일이 많다. 그래서 중간 결과를 늘 받아 두고,
+    // 끝날 때 끝난 말이 없으면 마지막 중간 결과를 쓴다. 말이 1.2초 멈추면 듣기를 끝낸다(안 끝나고 계속 듣는 브라우저가 있다).
+    rec.interimResults = true;
     let done = false;
     let best: string[] = [];
+    let interim = "";
     let heardAnything = false;
     const startedAt = Date.now();
+    let quiet: ReturnType<typeof setTimeout> | null = null;
+    const maxTimer = setTimeout(() => rec.stop(), 10000);
+    const settle = () => {
+      clearTimeout(maxTimer);
+      if (quiet) clearTimeout(quiet);
+    };
     const fail = (code: string) => {
       if (done) return;
       done = true;
+      settle();
       reject(Object.assign(new Error(code), { code }));
+    };
+    const succeed = (alts: string[]) => {
+      if (done) return;
+      done = true;
+      settle();
+      try {
+        rec.abort();
+      } catch {}
+      resolve(alts);
     };
     rec.onresult = (e) => {
       heardAnything = true;
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i];
         if (r.isFinal) best = altsOf(r);
-        else onInterim?.(r[0].transcript);
+        else {
+          interim = r[0].transcript.trim();
+          onInterim?.(interim);
+        }
       }
+      if (best.length) return succeed(best);
+      if (quiet) clearTimeout(quiet);
+      quiet = setTimeout(() => (interim ? succeed([interim]) : rec.stop()), 1200);
     };
-    rec.onerror = (e) => fail(e.error === "no-speech" && Date.now() - startedAt < 1200 ? "broken" : e.error || "broken");
+    rec.onerror = (e) => {
+      if (interim) return succeed([interim]);
+      fail(e.error === "no-speech" && Date.now() - startedAt < 1200 ? "broken" : e.error || "broken");
+    };
     rec.onend = () => {
       if (current === rec) current = null;
       if (done) return;
-      if (best.length) {
-        done = true;
-        return resolve(best);
-      }
+      if (best.length) return succeed(best);
+      if (interim) return succeed([interim]);
       // 1.5초도 안 돼서 아무것도 못 듣고 끝나면 듣기 자체가 안 되는 브라우저다
       fail(!heardAnything && Date.now() - startedAt < 1500 ? "broken" : "no-speech");
     };
@@ -349,11 +428,33 @@ export function listenAlways(onText: (alts: string[]) => void, onState: (s: "on"
     current?.abort();
     current = rec;
     rec.continuous = true;
-    rec.interimResults = false;
+    // 끝난 말(isFinal)을 잘 안 주는 브라우저를 위해 중간 결과가 1.2초 그대로면 그걸 한마디로 본다
+    rec.interimResults = true;
+    let pending = "";
+    let sent = "";
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const emit = (alts: string[]) => {
+      if (timer) clearTimeout(timer);
+      pending = "";
+      if (!alts.length || alts[0] === sent || busySpeaking()) return;
+      sent = alts[0];
+      lastHow = "인식";
+      onText(alts);
+    };
     rec.onresult = (e) => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i];
-        if (r.isFinal && !busySpeaking()) onText(altsOf(r));
+        if (r.isFinal) {
+          const alts = altsOf(r);
+          // 중간 결과로 이미 처리한 말이면 다시 하지 않는다
+          if (alts[0] && alts[0] !== sent) emit(alts);
+          else if (timer) clearTimeout(timer);
+          sent = "";
+        } else {
+          pending = r[0].transcript.trim();
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => pending && emit([pending]), 1200);
+        }
       }
       fails = 0;
     };
@@ -388,6 +489,7 @@ export function listenAlways(onText: (alts: string[]) => void, onState: (s: "on"
 
 export type Command = {
   id: string;
+  label?: string; // 알아들은 뒤 화면에 보여 줄 한 일 (예: "다음 카드")
   say: string[]; // 이 말이 들어 있으면 이 명령으로 본다
   when?: boolean; // false면 지금 화면에서는 안 되는 명령
 };

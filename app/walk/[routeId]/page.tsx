@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AiWaiting, AppBar, CameraInput, Icon, IconLink, PhotoView } from "@/components/ui";
+import { usePermission, usePermState } from "@/components/Permission";
 import { PlaceLine } from "@/components/Place";
 import { VoiceControl } from "@/components/Voice";
 import { requestCheck } from "@/lib/api";
@@ -390,6 +391,8 @@ export default function WalkPage() {
   const quiet = useRef(false); // 연습 3단계: 꺾는 곳에서만 알린다
   const router = useRouter();
   const [startedAt] = useState(() => Date.now());
+  const [permDialog, ensurePerm] = usePermission();
+  const [loc, setLoc] = usePermState("location"); // 위치를 허용하기 전에는 위치를 쓰지 않는다
 
   useWakeLock(!!route && !arrived);
 
@@ -484,7 +487,7 @@ export default function WalkPage() {
 
   // GPS: 다음 카드 30m 안이면 넘기고, 등록 경로에서 50m·20초 벗어나면 물어본다
   useEffect(() => {
-    if (!route || arrived || !("geolocation" in navigator)) return;
+    if (!route || arrived || loc !== "granted" || !("geolocation" in navigator)) return;
     const id = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude: lat, longitude: lng, accuracy } = pos.coords;
@@ -553,7 +556,7 @@ export default function WalkPage() {
       { enableHighAccuracy: true, maximumAge: 3000 },
     );
     return () => navigator.geolocation.clearWatch(id);
-  }, [route, go, arrived]);
+  }, [route, go, arrived, loc]);
 
   if (route === undefined) {
     return (
@@ -589,20 +592,20 @@ export default function WalkPage() {
   if (level === 3 && autoMode !== "auto") level = 2;
   const minimal = level === 3 && !showPhoto && !draft;
   const commands: Command[] = [
-    { id: "next", say: ["다음", "넘겨", "다음 카드"], when: !isLast },
-    { id: "prev", say: ["이전", "뒤로", "전 카드", "앞 카드"], when: index > 0 },
-    { id: "repeat", say: ["다시", "뭐라고", "한 번 더", "안내해"] },
-    { id: "where", say: ["얼마나", "남았", "몇 미터", "거리", "몇 번째"] },
-    { id: "seen", say: ["보여", "보입니다", "찾았어"], when: draft },
-    { id: "missing", say: ["안 보여", "안보여", "못 찾겠", "없어"] },
-    { id: "accept", say: ["이걸로", "바꿔"], when: draft },
-    { id: "lost", say: ["길을 잃었", "길 잃었", "여기가 어디", "어디야", "모르겠"] },
-    { id: "photo", say: ["사진"], when: !draft },
-    { id: "arrive", say: ["도착"], when: isLast },
-    { id: "ask", say: ["물어볼", "도와줘", "도움"] },
-    { id: "place", say: ["건물", "주소", "번지", "번호판"] },
-    { id: "stop", say: ["그만", "조용", "멈춰"] },
-    { id: "home", say: ["홈으로", "처음 화면"] },
+    { id: "next", label: "다음 카드", say: ["다음", "넘겨", "다음 카드"], when: !isLast },
+    { id: "prev", label: "이전 카드", say: ["이전", "뒤로", "전 카드", "앞 카드"], when: index > 0 },
+    { id: "repeat", label: "다시 읽기", say: ["다시", "뭐라고", "한 번 더", "안내해"] },
+    { id: "where", label: "남은 거리", say: ["얼마나", "남았", "몇 미터", "거리", "몇 번째"] },
+    { id: "seen", label: "보여요", say: ["보여", "보입니다", "찾았어"], when: draft },
+    { id: "missing", label: "안 보여요", say: ["안 보여", "안보여", "못 찾겠", "없어"] },
+    { id: "accept", label: "이걸로 바꾸기", say: ["이걸로", "바꿔"], when: draft },
+    { id: "lost", label: "길을 잃었어요", say: ["길을 잃었", "길 잃었", "여기가 어디", "어디야", "모르겠"] },
+    { id: "photo", label: "사진 보기", say: ["사진"], when: !draft },
+    { id: "arrive", label: "도착", say: ["도착"], when: isLast },
+    { id: "ask", label: "도움 요청", say: ["물어볼", "도와줘", "도움"] },
+    { id: "place", label: "건물·번지 읽기", say: ["건물", "주소", "번지", "번호판"] },
+    { id: "stop", label: "멈춤", say: ["그만", "조용", "멈춰"] },
+    { id: "home", label: "홈으로", say: ["홈으로", "처음 화면"] },
   ];
 
   function onVoice(id: string) {
@@ -689,6 +692,25 @@ export default function WalkPage() {
           </Link>
         )}
 
+        {loc !== null && loc !== "granted" && (
+          <div className="surface-card tonal-card" style={{ gap: 8 }}>
+            <p className="body-medium">
+              {loc === "denied"
+                ? "위치가 꺼져 있어서 카드를 직접 넘겨요."
+                : "위치를 허용하면 갈림길에 가까워질 때 카드가 저절로 넘어가고, 남은 거리를 소리로 알려 줘요."}
+            </p>
+            <button
+              className="btn btn-tonal"
+              onClick={async () => {
+                const perm = await ensurePerm("location");
+                setLoc(perm.ok ? "granted" : "denied");
+              }}
+            >
+              위치 허용하기
+            </button>
+          </div>
+        )}
+        {permDialog}
         {autoMode === "manual" && <p className="label-medium muted">위치가 정확하지 않아요. 카드를 직접 넘겨 주세요.</p>}
         {offRoute && (
           <div className="banner body-medium">

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AiWaiting, AppBar, CameraInput, Icon, PhotoView } from "@/components/ui";
+import { usePermission } from "@/components/Permission";
 import { DictateButton, useScreenSpeech } from "@/components/Voice";
 import { requestCards } from "@/lib/api";
 import { db, getPhoto, newId, savePhoto } from "@/lib/db";
@@ -49,6 +50,7 @@ export default function RecordPage() {
   const track = useRef<[number, number][]>([]);
   const lastPos = useRef<GeolocationPosition | null>(null);
   const watchId = useRef<number | null>(null);
+  const [permDialog, ensurePerm] = usePermission();
 
   useScreenSpeech(
     aiWorking
@@ -65,12 +67,13 @@ export default function RecordPage() {
     };
   }, []);
 
-  function start() {
+  async function start() {
     if (!name.trim()) return setError("길 이름을 적어 주세요");
     setError(null);
+    // 걸어간 길을 기록하려면 위치가 필요하다. 먼저 물어보고, 허용하지 않아도 사진과 메모만으로 등록할 수 있다.
+    const perm = await ensurePerm("location");
     setStarted(true);
-    // 걷는 동안 GPS 기록. 위치를 못 쓰게 해도 사진과 메모만으로 등록할 수 있다.
-    if ("geolocation" in navigator) {
+    if (perm.ok && "geolocation" in navigator) {
       watchId.current = navigator.geolocation.watchPosition(
         (pos) => {
           lastPos.current = pos;
@@ -166,6 +169,7 @@ export default function RecordPage() {
     return (
       <main className="screen">
         <AppBar title="새 길 등록" back="/" />
+        {permDialog}
         <div className="body">
           <p className="body-large">
             보호자나 친구와 같이 걸으면서 등록해요. 갈림길마다 사진 한 장과 짧은 메모를 남기면 AI가 안내 카드로 만들어요.

@@ -8,7 +8,9 @@ import { makeBackup, restoreBackup } from "@/lib/backup";
 import { db } from "@/lib/db";
 import { saveJson } from "@/lib/download";
 import { saveSettings, useSettings, type ListenMode, type Settings, type Theme, type VoiceEngine } from "@/lib/settings";
-import { canListen, canListenAlways, speak } from "@/lib/voice";
+import { usePermission, usePermState } from "@/components/Permission";
+import type { Perm } from "@/lib/permissions";
+import { canListen, canListenAlways, readVoiceLog, speak, type VoiceLogItem } from "@/lib/voice";
 import { toast } from "@/lib/toast";
 import { clearEvents, exportPayload, loadEvents, summarize, type UsageSummary } from "@/lib/usageLog";
 import { josa } from "@/lib/josa";
@@ -221,6 +223,70 @@ const THEMES: { value: Theme; label: string; icon: "phone" | "light" | "dark" }[
   { value: "dark", label: "어둡게", icon: "dark" },
 ];
 
+// 권한: 지금 상태를 보여 주고, 먼저 설명한 뒤 휴대폰에 요청한다
+function PermissionRow({ p, title, desc }: { p: Perm; title: string; desc: string }) {
+  const [st, setSt] = usePermState(p);
+  const [dialog, ensure] = usePermission();
+  const label = st === "granted" ? "허용됨" : st === "denied" ? "꺼져 있음" : "아직 안 물어봄";
+  return (
+    <>
+      <Row title={title} desc={`${desc} · ${label}`}>
+        {st !== "granted" && (
+          <button
+            className="btn btn-tonal label-large"
+            style={{ width: "auto", padding: "0 14px", minHeight: 40 }}
+            onClick={async () => setSt((await ensure(p)).ok ? "granted" : "denied")}
+          >
+            허용하기
+          </button>
+        )}
+      </Row>
+      {dialog}
+    </>
+  );
+}
+
+function PermissionRows() {
+  return (
+    <>
+      <p className="section-label label-large">권한</p>
+      <PermissionRow p="location" title="위치" desc="카드 자동 넘김, 남은 거리 안내" />
+      <PermissionRow p="mic" title="마이크" desc="말로 조작하기" />
+    </>
+  );
+}
+
+// 말로 하기가 잘 안 될 때 원인을 찾으려고 보는 기록 (이 휴대폰에만)
+function VoiceLogBox() {
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<VoiceLogItem[]>([]);
+  return (
+    <div style={{ padding: "0 16px 12px" }}>
+      <button
+        className="btn btn-text label-large"
+        style={{ padding: 0 }}
+        onClick={() => {
+          setItems(readVoiceLog());
+          setOpen((o) => !o);
+        }}
+      >
+        {open ? "말로 하기 기록 닫기" : "말로 하기 기록 보기"}
+      </button>
+      {open && (
+        <div className="surface-card" style={{ gap: 6, marginTop: 6 }}>
+          {items.length === 0 && <p className="body-medium muted">아직 기록이 없어요.</p>}
+          {items.map((it, i) => (
+            <p key={i} className="label-medium">
+              {new Date(it.at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })} · {it.how} ·{" "}
+              {it.heard ? `"${it.heard}"` : ""} {it.did ? `→ ${it.did}` : ""} {it.error ? `오류: ${it.error}` : ""}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const VOICES: { value: VoiceEngine; label: string }[] = [
   { value: "ai", label: "자연스러운 AI 목소리" },
   { value: "device", label: "휴대폰 목소리" },
@@ -295,6 +361,9 @@ export default function SettingsPage() {
             이 브라우저에서는 음성 인식이 안 돼요. 안드로이드 크롬이나 아이폰 사파리에서 열어 주세요.
           </p>
         )}
+
+        <PermissionRows />
+        <VoiceLogBox />
 
         <p className="section-label label-large">보호자</p>
         <Row title="보호자에게 위치 보내기" desc="'길을 잃었어요' 화면에 버튼이 생겨요. 저절로 보내지는 않아요.">

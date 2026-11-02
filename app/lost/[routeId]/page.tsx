@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { AiWaiting, AppBar, CameraInput, Icon, MockBadge, PhotoView } from "@/components/ui";
 import { PlaceLine } from "@/components/Place";
 import { VoiceControl, useScreenSpeech } from "@/components/Voice";
+import { permState } from "@/lib/permissions";
 import { hasPlace, placeText } from "@/lib/place";
 import { requestWhereAmI } from "@/lib/api";
 import { db } from "@/lib/db";
@@ -19,7 +20,9 @@ import type { ImagePayload, Route, WhereAmIResult } from "@/types";
 const MAX_TRIES = 3;
 
 // 지금 위치 (5초 안에 못 잡으면 없이 보낸다). 카드 지점까지 거리를 AI가 참고한다.
-function currentGps(): Promise<{ lat: number; lng: number } | null> {
+async function currentGps(): Promise<{ lat: number; lng: number } | null> {
+  // 위치를 아직 허용하지 않았으면 여기서 갑자기 묻지 않고 사진만 보낸다
+  if ((await permState("location")) !== "granted") return null;
   return new Promise((resolve) => {
     if (!("geolocation" in navigator)) return resolve(null);
     navigator.geolocation.getCurrentPosition(
@@ -178,13 +181,13 @@ export default function LostPage() {
   };
 
   const commands: Command[] = [
-    { id: "resume", say: ["다시 걷기", "이어서", "다시 걸을"], when: !!(confident && result?.matchedCardOrder) },
-    { id: "last", say: ["마지막 카드", "돌아갈", "돌아가기"] },
-    { id: "replan", say: ["다시 길 찾", "새로 찾", "길 다시"], when: route.kind === "planned" && !!route.dest },
-    { id: "ask", say: ["물어볼", "물어보기", "도와줘"] },
-    { id: "guardian", say: ["보호자", "전화", "위치 보내", "엄마", "아빠"], when: !!settings?.guardianShare },
-    { id: "repeat", say: ["다시 말해", "뭐라고", "한 번 더"] },
-    { id: "stop", say: ["그만", "조용"] },
+    { id: "resume", label: "다시 걷기", say: ["다시 걷기", "이어서", "다시 걸을"], when: !!(confident && result?.matchedCardOrder) },
+    { id: "last", label: "마지막 카드로", say: ["마지막 카드", "돌아갈", "돌아가기"] },
+    { id: "replan", label: "다시 길 찾기", say: ["다시 길 찾", "새로 찾", "길 다시"], when: route.kind === "planned" && !!route.dest },
+    { id: "ask", label: "물어보기", say: ["물어볼", "물어보기", "도와줘"] },
+    { id: "guardian", label: "보호자에게 위치 보내기", say: ["보호자", "전화", "위치 보내", "엄마", "아빠"], when: !!settings?.guardianShare },
+    { id: "repeat", label: "다시 읽기", say: ["다시 말해", "뭐라고", "한 번 더"] },
+    { id: "stop", label: "멈춤", say: ["그만", "조용"] },
   ];
   const routeId2 = route.id;
   function onVoice(id: string) {

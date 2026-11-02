@@ -5,6 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { CornerBlob, LineIcon, TabBar, TONES } from "@/components/brand";
 import { Roadview } from "@/components/Roadview";
 import { AiWaiting, AppBar, CameraInput, Icon, MockBadge } from "@/components/ui";
+import { usePermission } from "@/components/Permission";
 import { PlaceLine } from "@/components/Place";
 import { DictateButton, VoiceControl, useScreenSpeech } from "@/components/Voice";
 import { requestCheck, requestPlaces, requestPlan } from "@/lib/api";
@@ -14,6 +15,7 @@ import { josa } from "@/lib/josa";
 import { toast } from "@/lib/toast";
 import { bearingDeg, distanceM } from "@/lib/geo";
 import { logEvent } from "@/lib/usageLog";
+import { permState } from "@/lib/permissions";
 import { placeSpeech } from "@/lib/place";
 import { type Command, PLAN_QUERY_KEY, speak } from "@/lib/voice";
 import type { Card, CheckResult, Place, PlanCard, PlanResult, Route } from "@/types";
@@ -98,7 +100,8 @@ function ShotBox({ i, card, shot, onPick, onRemove }: { i: number; card: PlanCar
 export default function PlanPage() {
   const router = useRouter();
   const prefill = useSyncExternalStore(noSubscribe, readDest, () => null);
-  const [gps, setGps] = useState<Gps | "waiting" | "denied">("waiting");
+  const [gps, setGps] = useState<Gps | "waiting" | "ask" | "denied">("waiting");
+  const [permDialog, ensurePerm] = usePermission();
   const [q, setQ] = useState("");
   const [places, setPlaces] = useState<Place[] | null>(null);
   const [placesMock, setPlacesMock] = useState(false);
@@ -110,8 +113,9 @@ export default function PlanPage() {
   const [name, setName] = useState("");
   const [shots, setShots] = useState<Record<number, Shot>>({});
 
-  useEffect(() => {
-    if (!("geolocation" in navigator)) return void setTimeout(() => setGps("denied"), 0);
+  function locate() {
+    if (!("geolocation" in navigator)) return setGps("denied");
+    setGps("waiting");
     navigator.geolocation.getCurrentPosition(
       (p) => {
         const at = { lat: p.coords.latitude, lng: p.coords.longitude };
@@ -123,6 +127,17 @@ export default function PlanPage() {
       () => setGps("denied"),
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
     );
+  }
+
+  // 위치 권한을 이미 허용했으면 바로 위치를 잡고, 아니면 먼저 물어본다(버튼)
+  async function askLocation() {
+    const perm = await ensurePerm("location");
+    if (perm.ok) locate();
+    else setGps("denied");
+  }
+
+  useEffect(() => {
+    permState("location").then((st) => (st === "granted" ? locate() : setGps(st === "denied" ? "denied" : "ask")));
     // 홈에서 말로 고른 도착지가 있으면 바로 찾는다
     try {
       const pq = sessionStorage.getItem(PLAN_QUERY_KEY);
@@ -278,9 +293,9 @@ export default function PlanPage() {
   }
 
   const planCommands: Command[] = [
-    { id: "go", say: ["이 길로", "출발", "가자", "갈게"] },
-    { id: "read", say: ["읽어", "카드", "알려 줘", "알려줘"] },
-    { id: "back", say: ["다시 고르", "다른 곳"] },
+    { id: "go", label: "이 길로 가기", say: ["이 길로", "출발", "가자", "갈게"] },
+    { id: "read", label: "카드 읽기", say: ["읽어", "카드", "알려 줘", "알려줘"] },
+    { id: "back", label: "다시 고르기", say: ["다시 고르", "다른 곳"] },
   ];
   function onPlanVoice(id: string) {
     if (!plan) return;
@@ -295,7 +310,7 @@ export default function PlanPage() {
         ? `카드 ${plan.cards.length}장을 만들었어요. 걸어서 약 ${Math.max(1, Math.round(plan.totalTime / 60))}분이에요. 출발하려면 '이 길로 가기'를 눌러 주세요.`
         : "도착지 이름을 적거나 말해 주세요. 출발지는 지금 위치예요.",
   );
-  const searchCommands: Command[] = ORDINALS.map((say, i) => ({ id: String(i), say, when: !!places && i < places.length }));
+  const searchCommands: Command[] = ORDINALS.map((say, i) => ({ id: String(i), label: `${i + 1}번 고르기`, say, when: !!places && i < places.length }));
 
   if (busy === "plan") {
     return (
@@ -399,13 +414,19 @@ export default function PlanPage() {
       <AppBar title="처음 가는 길" />
       <div className="body">
         <p className="body-large">도착지를 고르면 꺾는 곳마다 근처 가게를 길잡이로 삼아 카드 초안을 만들어요.</p>
-        <p className="label-medium muted">
-          {gps === "waiting"
-            ? "지금 위치 찾는 중…"
-            : gps === "denied"
-              ? "위치를 쓸 수 없어요. 휴대폰 설정에서 위치를 허용해 주세요. 출발지는 지금 위치예요."
-              : "출발지: 지금 위치"}
-        </p>
+        {gps === "ask" || gps === "denied" ? (
+          <div className="surface-card tonal-card" style={{ gap: 8 }}>
+            <p className="body-medium">
+              {gps === "ask" ? "출발지는 지금 위치예요. 지금 위치를 알려면 위치 권한이 필요해요." : "위치를 쓸 수 없어서 출발지를 알 수 없어요."}
+            </p>
+            <button className="btn btn-filled" onClick={askLocation}>
+              <Icon name="flag" size={18} /> 위치 허용하기
+            </button>
+          </div>
+        ) : (
+          <p className="label-medium muted">{gps === "waiting" ? "지금 위치 찾는 중…" : "출발지: 지금 위치"}</p>
+        )}
+        {permDialog}
         <form
           className="row"
           style={{ alignItems: "center" }}

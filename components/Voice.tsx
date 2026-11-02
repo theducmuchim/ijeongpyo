@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePermission, usePermState } from "@/components/Permission";
 import { Icon } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
 import { toast } from "@/lib/toast";
-import { type Command, canListen, canListenAlways, finishListening, listenAlways, listenOnce, matchCommand, speak } from "@/lib/voice";
+import { type Command, canListen, canListenAlways, finishListening, listenAlways, listenOnce, matchCommand, speak, voiceLog } from "@/lib/voice";
 
 type Props = {
   commands: Command[];
@@ -23,6 +24,9 @@ export function VoiceControl({ commands, onCommand, onOther, allowAlways, exampl
   const s = useSettings();
   const [state, setState] = useState<"idle" | "listening" | "thinking" | "on" | "off" | "denied">("idle");
   const [heard, setHeard] = useState<string | null>(null);
+  const [did, setDid] = useState<string | null>(null); // 알아들은 뒤 한 일
+  const [permDialog, ensure] = usePermission();
+  const [mic, setMic] = usePermState("mic");
   // 계속 듣는 동안 화면이 바뀌어도 최신 명령 목록으로 맞추게 ref에 둔다
   const latest = useRef({ commands, onCommand, onOther, examples });
   useEffect(() => {
@@ -31,15 +35,38 @@ export function VoiceControl({ commands, onCommand, onOther, allowAlways, exampl
   const [paused, setPaused] = useState(false);
   // 계속 듣기는 브라우저 음성 인식이 될 때만. 안 되는 브라우저(아이폰·아이패드의 크롬 등)는 버튼으로 듣는다.
   const wantsAlways = !!allowAlways && s?.listenMode === "always" && canListenAlways();
-  const always = wantsAlways && !paused;
+  const always = wantsAlways && !paused && mic === "granted";
 
   function handle(alts: string[], fromAlways: boolean) {
     const { commands: cmds, onCommand: run, onOther: other, examples: ex } = latest.current;
     const text = alts[0] ?? "";
     setHeard(text);
     const c = matchCommand(alts, cmds);
-    if (c) return run(c.id, text);
-    if (other) return other(text);
+    // 알아들은 뒤에 한 일을 화면과 기록에 남긴다. 한 일이 실패하면 그것도 알린다 (조용히 멈추지 않게).
+    try {
+      if (c) {
+        run(c.id, text);
+        setDid(c.label ?? "했어요");
+        voiceLog({ heard: text, did: c.label ?? c.id });
+        return;
+      }
+      if (other) {
+        other(text);
+        setDid(null);
+        voiceLog({ heard: text, did: "말한 내용으로 처리" });
+        return;
+      }
+    } catch (e) {
+      setDid("하지 못했어요");
+      voiceLog({
+        heard: text,
+        error: String((e as Error)?.message ?? e).slice(0, 120),
+      });
+      toast("알아들었지만 하지 못했어요. 버튼을 눌러 주세요.");
+      return;
+    }
+    setDid("맞는 말이 없어요");
+    voiceLog({ heard: text, did: "맞는 말 없음" });
     // 계속 듣기에서는 옆 사람 말소리도 들어오니, 모르는 말은 조용히 넘긴다
     if (!fromAlways) speak(`알아듣지 못했어요. ${ex}처럼 말해 주세요.`, { force: true });
   }
@@ -56,18 +83,53 @@ export function VoiceControl({ commands, onCommand, onOther, allowAlways, exampl
     // 녹음 중에 다시 누르면 바로 멈추고 보낸다
     if (state === "listening") return finishListening();
     if (state === "thinking") return;
+    // 마이크 권한을 먼저 설명하고 물어본다
+    const perm = await ensure("mic");
+    setMic(perm.ok ? "granted" : "denied");
+    if (!perm.ok) return;
     setState("listening");
     setHeard(null);
+    setDid(null);
+    if (perm.fresh) speak("이제 말해 주세요.", { force: true });
     try {
       const hints = latest.current.commands.filter((c) => c.when !== false).flatMap((c) => c.say);
-      handle(await listenOnce({ onInterim: setHeard, onPhase: setState, hints }), false);
+      handle(
+        await listenOnce({
+          onInterim: setHeard,
+          onPhase: setState,
+          hints,
+          fresh: perm.fresh,
+        }),
+        false,
+      );
     } catch (e) {
       const msg = (e as Error).message;
+      voiceLog({ error: msg });
       toast(msg);
       speak(msg, { force: true });
     } finally {
       setState("idle");
     }
+  }
+
+  const result = heard ? `들은 말: ${heard}${did ? ` → ${did}` : ""}` : `예: ${examples}`;
+
+  if (wantsAlways && mic !== "granted") {
+    return (
+      <div className="voice-bar">
+        <button
+          className="btn btn-tonal"
+          onClick={async () => {
+            const perm = await ensure("mic");
+            setMic(perm.ok ? "granted" : "denied");
+          }}
+        >
+          <Icon name="mic" size={20} /> 마이크 허용하고 듣기
+        </button>
+        <p className="label-medium muted voice-hint">걷는 동안 버튼 없이 말로 조작해요</p>
+        {permDialog}
+      </div>
+    );
   }
 
   if (wantsAlways) {
@@ -80,7 +142,9 @@ export function VoiceControl({ commands, onCommand, onOther, allowAlways, exampl
         <button className="btn btn-text label-large" onClick={() => setPaused((p) => !p)}>
           {paused ? "다시 듣기" : "잠깐 끄기"}
         </button>
-        <p className="label-medium muted voice-hint">{heard ? `들은 말: ${heard}` : `예: ${examples}`}</p>
+        <p className="label-medium muted voice-hint" aria-live="polite">
+          {result}
+        </p>
       </div>
     );
   }
@@ -91,8 +155,9 @@ export function VoiceControl({ commands, onCommand, onOther, allowAlways, exampl
         <Icon name="mic" size={20} /> {state === "listening" ? "듣는 중… 말을 마치면 멈춰요" : state === "thinking" ? "알아듣는 중…" : label}
       </button>
       <p className="label-medium muted voice-hint" aria-live="polite">
-        {heard ? `들은 말: ${heard}` : `예: ${examples}`}
+        {result}
       </p>
+      {permDialog}
     </div>
   );
 }
@@ -101,28 +166,39 @@ export function VoiceControl({ commands, onCommand, onOther, allowAlways, exampl
 export function DictateButton({ onText, label }: { onText: (text: string) => void; label: string }) {
   const s = useSettings();
   const [on, setOn] = useState<false | "listening" | "thinking">(false);
+  const [permDialog, ensure] = usePermission();
   if (!s || !canListen()) return null;
   return (
-    <button
-      type="button"
-      className={`icon-btn${on === "listening" ? " mic-on" : ""}`}
-      aria-label={on === "listening" ? "듣는 중. 다시 누르면 멈춰요" : on === "thinking" ? "알아듣는 중" : label}
-      disabled={on === "thinking"}
-      onClick={async () => {
-        if (on === "listening") return finishListening();
-        setOn("listening");
-        try {
-          const [text] = await listenOnce({ onPhase: setOn });
-          onText(text);
-        } catch (e) {
-          toast((e as Error).message);
-        } finally {
-          setOn(false);
-        }
-      }}
-    >
-      <Icon name="mic" />
-    </button>
+    <>
+      <button
+        type="button"
+        className={`icon-btn${on === "listening" ? " mic-on" : ""}`}
+        aria-label={on === "listening" ? "듣는 중. 다시 누르면 멈춰요" : on === "thinking" ? "알아듣는 중" : label}
+        disabled={on === "thinking"}
+        onClick={async () => {
+          if (on === "listening") return finishListening();
+          const perm = await ensure("mic");
+          if (!perm.ok) return;
+          setOn("listening");
+          if (perm.fresh) speak("이제 말해 주세요.", { force: true });
+          try {
+            const [text] = await listenOnce({
+              onPhase: setOn,
+              fresh: perm.fresh,
+            });
+            voiceLog({ heard: text, did: "글자로 넣음" });
+            onText(text);
+          } catch (e) {
+            toast((e as Error).message);
+          } finally {
+            setOn(false);
+          }
+        }}
+      >
+        <Icon name="mic" />
+      </button>
+      {permDialog}
+    </>
   );
 }
 

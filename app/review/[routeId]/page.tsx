@@ -175,8 +175,8 @@ export default function ReviewPage() {
         </div>
         <VoiceControl
           commands={[
-            { id: "read", say: ["읽어", "들려"] },
-            { id: "save", say: ["저장"] },
+            { id: "read", label: "카드 읽기", say: ["읽어", "들려"] },
+            { id: "save", label: "저장하기", say: ["저장"] },
           ]}
           onCommand={(id) => {
             if (id === "save") save();
