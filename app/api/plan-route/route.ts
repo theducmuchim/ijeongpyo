@@ -53,7 +53,7 @@ export async function POST(req: Request) {
           const ranked = rankForLandmark(list, 6);
           // TMAP이 그 지점 안내에 쓴 이름(예: "대전역 3번출구", "역전약국")은 실제로 보이는 것일 가능성이 높아 맨 앞에 둔다
           const poi = p.action === "arrive" ? "" : p.nearPoiName;
-          if (poi && !ranked.some((s) => s.name === poi)) ranked.unshift({ name: poi, category: "TMAP 안내 지점", lat: p.lat, lng: p.lng, dist: 0 });
+          if (poi && !ranked.some((s) => s.name === poi)) ranked.unshift({ name: poi, category: "지도 안내에 나오는 곳", lat: p.lat, lng: p.lng, dist: 0 });
           return ranked;
         } catch (e) {
           console.error("[plan-route] 상가정보", String((e as Error).message).slice(0, 200));
@@ -86,10 +86,20 @@ export async function POST(req: Request) {
       const list = nearby[i];
       const pick = picks?.[i];
       // AI가 고른 이름을 실제 가게 목록과 맞춘다 (목록에 없는 이름은 버린다)
+      const destName = end!.name.replace(/^\(시험\)\s*/, "").replace(/\[.*?\]/g, "").trim();
+      if (p.action === "arrive") {
+        // 도착 카드는 도착지 이름으로
+        return { order: i + 1, action: p.action, instruction: sentenceFor(destName || null, "arrive"), landmark: { name: destName, side: "ahead" }, candidates: [], lat: p.lat, lng: p.lng };
+      }
       const chosen = pick ? pick.candidates.map((n) => list.find((s) => s.name === n)).filter((x): x is NearStore => !!x) : list.slice(0, 3);
+      // TMAP이 그 자리 안내에 쓴 이름(지하철 출구 등)은 AI가 빼도 후보에 남긴다
+      const poi = list.find((s) => s.category === "지도 안내에 나오는 곳");
+      if (poi && !chosen.includes(poi)) chosen.splice(Math.min(1, chosen.length), 0, poi);
       const candidates = chosen.slice(0, 3).map(toCandidate);
       const first = candidates[0]?.name ?? null;
-      const instruction = pick && (candidates.length > 0 || pick.candidates.length === 0) ? pick.instruction : sentenceFor(first, p.action, p.crossing);
+      // 문장은 AI에게 맡기지 않고 틀로 만든다. 실제로 돌려 보니 AI가 횡단보도를 "곧장 가세요"로 쓰거나
+      // "도착했습니다"처럼 말투가 어긋나는 일이 있었다. AI는 잘 보이는 길잡이를 고르는 일만 한다.
+      const instruction = sentenceFor(first, p.action, p.crossing);
       return { order: i + 1, action: p.action, instruction, landmark: { name: first ?? "", side: "ahead" }, candidates, lat: p.lat, lng: p.lng };
     });
 
