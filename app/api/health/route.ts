@@ -1,4 +1,4 @@
-import { aiTrace, askAI, isMockMode } from "@/lib/ai";
+import { aiTrace, askAI, isMockMode, tuning } from "@/lib/ai";
 import { hasStores, rankForLandmark, storesNear } from "@/lib/stores";
 import { hasTmap, pedestrianRoute, searchPlaces } from "@/lib/tmap";
 import { POST as cardsFromWalk } from "../cards-from-walk/route";
@@ -33,6 +33,9 @@ export async function GET(req: Request) {
 
   // ?ai=cards|lost|fix: 체험용 사진으로 사진 AI 기능을 실제로 한 번씩 불러 본다
   const which = url.searchParams.get("ai");
+  // 시험용: 이 요청에서만 생각 수준·temperature를 바꿔 본다
+  if (url.searchParams.get("think")) tuning.thinking = url.searchParams.get("think")!;
+  if (url.searchParams.has("temp")) tuning.temperature = url.searchParams.get("temp") || undefined;
   if (which) {
     const photo = async (name: string) => {
       const img = await fetch(`https://ijeongpyo-one.vercel.app/demo/${name}`, { cache: "no-store" });

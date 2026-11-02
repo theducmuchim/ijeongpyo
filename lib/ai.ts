@@ -1,5 +1,5 @@
 import "server-only";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import type { ImagePayload } from "@/types";
 
 // AI를 부르는 코드는 이 파일에만 둔다. 다른 AI로 바꿀 때 여기만 고치면 된다.
@@ -32,8 +32,19 @@ export async function askAI(system: string, images: ImagePayload[], text: string
   }
 }
 
+// Gemini 3 계열은 temperature를 낮추면 오히려 답이 늦거나 꼬일 수 있어 기본값을 쓴다.
+// 생각(thinking)은 길안내에 깊이 필요 없어서 낮게 둔다. GEMINI_THINKING = minimal | low | medium | high | default
+export const tuning = { thinking: (process.env.GEMINI_THINKING || "low").toLowerCase(), temperature: process.env.GEMINI_TEMPERATURE };
+function modelTuning(model: string) {
+  const out: { temperature?: number; thinkingConfig?: { thinkingLevel: ThinkingLevel } } = {};
+  if (tuning.temperature) out.temperature = Number(tuning.temperature);
+  const levels: Record<string, ThinkingLevel> = { minimal: ThinkingLevel.MINIMAL, low: ThinkingLevel.LOW, medium: ThinkingLevel.MEDIUM, high: ThinkingLevel.HIGH };
+  if (model !== LITE_MODEL && levels[tuning.thinking]) out.thinkingConfig = { thinkingLevel: levels[tuning.thinking] };
+  return out;
+}
+
 // 점검 주소에서 어느 모델이 답했는지 보려고 남긴다
-export const aiTrace: { model: string; ms: number; ok: boolean }[] = [];
+export const aiTrace: { model: string; ms: number; ok: boolean; error?: string }[] = [];
 
 async function callModel(model: string, system: string, images: ImagePayload[], text: string): Promise<string> {
   const t = Date.now();
@@ -42,7 +53,7 @@ async function callModel(model: string, system: string, images: ImagePayload[], 
     aiTrace.push({ model, ms: Date.now() - t, ok: true });
     return out;
   } catch (e) {
-    aiTrace.push({ model, ms: Date.now() - t, ok: false });
+    aiTrace.push({ model, ms: Date.now() - t, ok: false, error: String((e as Error)?.message ?? e).slice(0, 300) });
     throw e;
   }
 }
@@ -64,7 +75,7 @@ async function callModelRaw(model: string, system: string, images: ImagePayload[
     config: {
       systemInstruction: system, // lib/prompts.ts의 지시문
       responseMimeType: "application/json", // JSON으로만 답하게 함
-      temperature: 0.2,
+      ...modelTuning(model),
     },
   });
   return res.text ?? "";
