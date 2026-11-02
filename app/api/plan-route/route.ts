@@ -25,10 +25,10 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return Response.json({ error: "요청을 읽을 수 없어요" }, { status: 400 });
+    return Response.json({ error: "보낸 내용을 읽지 못했어요. 다시 해 주세요." }, { status: 400 });
   }
   const { start, end } = body;
-  if (!ok(start) || !ok(end)) return Response.json({ error: "출발지와 도착지가 필요해요" }, { status: 400 });
+  if (!ok(start) || !ok(end)) return Response.json({ error: "출발지나 도착지를 알 수 없어요. 도착지를 다시 골라 주세요." }, { status: 400 });
 
   const mock = !hasTmap() || !hasStores() || isMockMode();
   if (!isMockMode() && !(await checkLimit(deviceId))) {

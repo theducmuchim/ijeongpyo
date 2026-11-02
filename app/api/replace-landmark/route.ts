@@ -30,9 +30,9 @@ export async function POST(req: Request) {
   try {
     body = (await req.json()) as Body;
   } catch {
-    return Response.json({ error: "요청을 읽을 수 없어요" }, { status: 400 });
+    return Response.json({ error: "보낸 내용을 읽지 못했어요. 다시 해 주세요." }, { status: 400 });
   }
-  if (!body.photo?.base64 || !body.card) return Response.json({ error: "사진이나 카드가 없어요" }, { status: 400 });
+  if (!body.photo?.base64 || !body.card) return Response.json({ error: "사진이 들어오지 않았어요. 다시 찍어 주세요." }, { status: 400 });
   const c = body.card;
 
   if (isMockMode()) {

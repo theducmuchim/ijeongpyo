@@ -38,7 +38,7 @@ export default function ReviewPage() {
       <main className="screen">
         <AppBar title="카드 확인" back="/" />
         <div className="body">
-          <p className="body-large">이 길을 찾을 수 없어요.</p>
+          <p className="body-large">이 길을 찾을 수 없어요. 홈에서 길을 다시 골라 주세요.</p>
         </div>
       </main>
     );
@@ -94,7 +94,7 @@ export default function ReviewPage() {
     <main className="screen">
       <AppBar title={`카드 확인 · ${route.cards.length}장`} back="/" />
       <div className="body" style={{ gap: 12 }}>
-        <p className="body-medium muted">문장이 어색하면 눌러서 고치세요. 사진을 누르면 다시 찍을 수 있어요.</p>
+        <p className="body-medium muted">문장이 어색하면 눌러서 고쳐 주세요. 사진을 누르면 다시 찍을 수 있어요.</p>
         <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {route.cards.map((c, i) => (
             <div key={c.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>

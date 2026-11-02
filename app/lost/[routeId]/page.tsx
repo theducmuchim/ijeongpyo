@@ -116,7 +116,7 @@ export default function LostPage() {
       <main className="screen">
         <AppBar title="길 찾기" back="/" />
         <div className="body">
-          <p className="body-large">이 길을 찾을 수 없어요.</p>
+          <p className="body-large">이 길을 찾을 수 없어요. 홈에서 길을 다시 골라 주세요.</p>
         </div>
       </main>
     );

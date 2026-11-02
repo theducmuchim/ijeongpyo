@@ -10,7 +10,7 @@ import s from "./intro.module.css";
 const SITE = "https://ijeongpyo-one.vercel.app";
 const TITLE = "이정표 — 길을 잘 잃는 사람을 위한 길안내 앱";
 const DESC =
-  "지도 대신 눈에 보이는 간판으로 안내하는 무료 길안내 앱. 익숙한 길에서도 방향을 잃는 사람, 길치, 발달성 지형적 방향감각 상실증(DTD)이 있는 사람을 위해 만들었어요.";
+  "지도 대신 눈에 보이는 간판으로 안내하는 무료 길안내 앱. 익숙한 길에서도 방향을 잃는 사람, 발달성 지형적 방향감각 상실증(DTD)이 있는 사람을 위해 만들었어요.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -223,7 +223,7 @@ export default function Intro() {
             </article>
           </div>
           <Link href="/" className={s.bar}>
-            앱 열어 보기 <span aria-hidden="true">→</span>
+            앱 열기 <span aria-hidden="true">→</span>
           </Link>
         </section>
 
@@ -260,7 +260,7 @@ export default function Intro() {
             </article>
             <article className={`${s.feat} ${s.fRed}`}>
               <h3>길을 잃었을 때</h3>
-              <p>사진과 GPS로 지금 위치를 찾아요. 그래도 모르겠으면 지나가는 사람에게 보여 줄 큰 글씨 화면이 있어요.</p>
+              <p>사진과 휴대폰 위치로 지금 어디쯤인지 찾아요. 그래도 모르겠으면 지나가는 사람에게 보여 줄 큰 글씨 화면이 있어요.</p>
               <Link href="/guide#lost">자세히 보기 →</Link>
             </article>
             <article className={`${s.feat} ${s.fYellow}`}>
@@ -287,7 +287,7 @@ export default function Intro() {
         {/* 6. 초록 줄무늬 띠: 체험으로 이어지기 */}
         <section className={s.stripes}>
           <Link href="/demo" className={s.stripePill}>
-            예시 사진으로 2분 체험
+            예시 사진으로 2분 체험하기
           </Link>
         </section>
 

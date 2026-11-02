@@ -4,7 +4,7 @@ import { AppearanceSync, RippleLayer, SnackbarHost } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "이정표",
-  description: "익숙한 길에서도 길을 잃는 사람을 위한 랜드마크 길안내",
+  description: "익숙한 길에서도 길을 잃는 사람을 위해, 눈에 보이는 간판으로 안내하는 길안내 앱",
   manifest: "/manifest.webmanifest",
   applicationName: "이정표",
   appleWebApp: { capable: true, title: "이정표", statusBarStyle: "default" },

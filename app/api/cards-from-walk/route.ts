@@ -30,10 +30,10 @@ export async function POST(req: Request) {
   try {
     body = (await req.json()) as Body;
   } catch {
-    return Response.json({ error: "요청을 읽을 수 없어요" }, { status: 400 });
+    return Response.json({ error: "보낸 내용을 읽지 못했어요. 다시 해 주세요." }, { status: 400 });
   }
   const junctions = body.junctions ?? [];
-  if (junctions.length === 0) return Response.json({ error: "갈림길이 없어요" }, { status: 400 });
+  if (junctions.length === 0) return Response.json({ error: "갈림길을 한 곳 이상 남겨 주세요." }, { status: 400 });
   if (junctions.length > MAX_JUNCTIONS) {
     return Response.json({ error: `갈림길은 ${MAX_JUNCTIONS}곳까지 등록할 수 있어요` }, { status: 400 });
   }
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       const cards = parseCards(raw, junctions.length);
       if (cards) return Response.json({ cards });
     }
-    return Response.json({ error: "카드를 만들지 못했어요. 메모로 직접 만들어 주세요." }, { status: 502 });
+    return Response.json({ error: "AI가 카드를 만들지 못했어요." }, { status: 502 });
   } catch (e) {
     const { message, status } = friendlyError(e);
     return Response.json({ error: message }, { status });

@@ -20,12 +20,12 @@ function addScript(src: string): Promise<void> {
     const s = document.createElement("script");
     s.src = src;
     s.onload = () => {
-      if (!window.kakao?.maps?.load) return reject(new Error("카카오 지도 파일 내용이 이상해요 (설정이 꺼져 있을 수 있어요)"));
+      if (!window.kakao?.maps?.load) return reject(new Error("지도 설정이 꺼져 있어요"));
       window.kakao.maps.load(() => resolve());
     };
     s.onerror = () => {
       s.remove();
-      reject(new Error("카카오 지도 파일을 받지 못했어요"));
+      reject(new Error("지도 파일을 받지 못했어요"));
     };
     document.head.appendChild(s);
   });
@@ -62,7 +62,7 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
       setWhy(msg);
       setState("error");
     };
-    const timer = setTimeout(() => fail(new Error("응답이 너무 늦어요")), TIMEOUT_MS);
+    const timer = setTimeout(() => fail(new Error("응답이 늦어요")), TIMEOUT_MS);
     loadSdk()
       .then(() => {
         if (!alive || !box.current) return;
@@ -148,7 +148,7 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
       <div ref={box} className="roadview" aria-label="로드뷰" />
       {state !== "ok" && (
         <div className="roadview-msg body-medium muted">
-          {state === "loading" ? "로드뷰 불러오는 중…" : state === "none" ? "이 지점은 로드뷰가 없어요." : `로드뷰를 불러오지 못했어요. (${why})`}
+          {state === "loading" ? "로드뷰 불러오는 중…" : state === "none" ? "이 지점은 로드뷰가 없어요." : `로드뷰를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요. (${why})`}
         </div>
       )}
       <p className="label-medium muted" style={{ marginTop: 6 }}>

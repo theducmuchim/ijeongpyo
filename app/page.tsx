@@ -50,7 +50,7 @@ export default function Home() {
       <div className="sheet">
         <section className="sheet-sec">
           <h2 className="sec-title">내 길</h2>
-          <p className="sec-sub">{routes === null ? "불러오는 중" : routes.length > 0 ? `저장한 길 ${routes.length}개` : "아직 저장한 길이 없어요"}</p>
+          <p className="sec-sub">{routes === null ? "불러오는 중…" : routes.length > 0 ? `저장한 길 ${routes.length}개` : "아직 저장한 길이 없어요"}</p>
 
           {routes === null && (
             <div className="tile-row">
@@ -73,7 +73,7 @@ export default function Home() {
                     <CornerBlob color={tone.blob} />
                     <span className="tile-top">
                       <LineIcon name={r.kind === "planned" ? "route" : "walk"} />
-                      <span className="tile-count">카드 {r.cards.length}</span>
+                      <span className="tile-count">카드 {r.cards.length}장</span>
                     </span>
                     <span className="tile-name">{r.name}</span>
                     <span className="tile-meta">{subtitle(r)}</span>
@@ -87,7 +87,7 @@ export default function Home() {
             <Link href="/demo" className="empty-tile pressable">
               <LineIcon name="sparkle" />
               <span>
-                <b>먼저 체험해 보기</b>
+                <b>먼저 체험하기</b>
                 <small>예시 사진으로 2분이면 돼요</small>
               </span>
             </Link>
@@ -101,7 +101,7 @@ export default function Home() {
           <Link href="/record" className="big-card pressable" style={{ background: "var(--mint)" }}>
             <CornerBlob color="var(--forest)" className="big" />
             <span className="big-title">새 길 등록</span>
-            <span className="big-desc">보호자와 한 번 같이 걸으며 갈림길마다 사진 찍기</span>
+            <span className="big-desc">보호자와 한 번 같이 걸으며 갈림길마다 사진을 찍어요</span>
             <span className="big-meta">
               <LineIcon name="pin" size={16} /> 갈림길 사진 + 메모
             </span>
@@ -127,7 +127,7 @@ export default function Home() {
               <span className="avatar" style={{ background: "var(--secondary-container)", color: "var(--orange)" }}>
                 <LineIcon name="sparkle" />
               </span>
-              <span className="title-medium">체험해 보기</span>
+              <span className="title-medium">체험하기</span>
               <span className="body-medium muted">예시 사진으로 2분</span>
             </Link>
             <Link href="/guide" className="pressable">

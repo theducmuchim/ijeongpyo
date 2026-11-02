@@ -76,7 +76,7 @@ export default function FixLandmarkPage() {
       <main className="screen">
         <AppBar title="길잡이 바꾸기" back="/" />
         <div className="body">
-          <p className="body-large">이 카드를 찾을 수 없어요.</p>
+          <p className="body-large">이 카드를 찾을 수 없어요. 홈에서 길을 다시 골라 주세요.</p>
         </div>
       </main>
     );

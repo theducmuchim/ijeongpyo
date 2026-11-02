@@ -274,7 +274,7 @@ export default function PlanPage() {
             </p>
           </div>
           <p className="body-medium muted">
-            사진이 없는 카드예요. 로드뷰로 미리 둘러보고, 그 자리 사진이 있으면 올려서 바로 사진 카드로 만들 수 있어요. 없으면 걸으면서 채워요.
+            아직 사진이 없는 카드예요. 로드뷰로 그 자리를 미리 보고, 사진이 있으면 올려 주세요. 없으면 걸으면서 채워요.
           </p>
           {Object.keys(shots).length > 0 && (
             <p className="chip label-medium">

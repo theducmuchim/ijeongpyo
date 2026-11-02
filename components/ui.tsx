@@ -254,7 +254,7 @@ export function useConfirm(): [React.ReactNode, (o: ConfirmOpts) => Promise<bool
         {opts.body && <p className="body-medium muted">{opts.body}</p>}
         <div className="actions">
           <button className="btn btn-text label-large" onClick={() => close(false)}>
-            {opts.cancel ?? "취소"}
+            {opts.cancel ?? "닫기"}
           </button>
           <button className={`btn ${opts.danger ? "btn-danger" : "btn-text"} label-large`} onClick={() => close(true)}>
             {opts.ok}

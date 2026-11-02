@@ -276,7 +276,7 @@ export default function SettingsPage() {
         </Link>
         <Link href="/demo" className="setting-row pressable">
           <div className="text">
-            <p className="body-large">체험해 보기</p>
+            <p className="body-large">체험하기</p>
             <p className="body-medium muted">예시 사진으로 등록부터 도착까지</p>
           </div>
           <Icon name="forward" />

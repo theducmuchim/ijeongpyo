@@ -129,7 +129,7 @@ function AiStep({ cards, setCards, real, setReal }: { cards: CardDraft[]; setCar
         DEMO_JUNCTIONS.map(async (j) => ({ photo: await blobToPayload(await fetchDemoPhoto(j.photo)), note: j.note })),
       );
       const res = await requestCards(junctions);
-      if (res.mock) throw new Error("서버에 AI 키가 없어서 시험 모드로 돌고 있어요.");
+      if (res.mock) throw new Error("지금은 진짜 AI를 쓸 수 없어요.");
       setCards(res.cards);
       setReal(true);
       toast("진짜 AI가 만든 카드로 바꿨어요");
@@ -232,7 +232,7 @@ function WalkStep({ cards }: { cards: CardDraft[] }) {
   return (
     <>
       <Coach title="카드를 보며 혼자 걸어요" tips={["30m 안에 들어가면 저절로 넘어가요", "넘어갈 때 진동하고 문장을 읽어 줘요", "걷는 동안 화면이 꺼지지 않아요"]}>
-        카드 한 장이 갈림길 하나예요. 지도 대신 사진과 문장만 봐요. 건물 사이처럼 위치가 부정확하면 &lsquo;다음 카드&rsquo;를 직접
+        카드 한 장이 갈림길 하나예요. 지도 대신 사진과 문장만 봐요. 건물 사이처럼 위치가 잘 안 잡히면 &lsquo;다음 카드&rsquo;를 직접
         눌러요.
       </Coach>
       <Preview title="체험: 학교 가는 길">

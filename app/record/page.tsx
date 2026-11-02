@@ -42,6 +42,9 @@ function readPrefill() {
 }
 const noSubscribe = () => () => {};
 
+// 서버 오류 문장에서 첫 문장만 쓴다. "내일 다시 해 주세요"처럼 뒤에 붙는 안내와 어긋나는 말을 뺀다.
+const firstSentence = (m: string) => (m.match(/^.*?[.?](?=\s|$)/)?.[0] ?? m).trim();
+
 export default function RecordPage() {
   const router = useRouter();
   const prefill = useSyncExternalStore(noSubscribe, readPrefill, () => "");
@@ -149,7 +152,7 @@ export default function RecordPage() {
       }));
     } catch (e) {
       // AI가 안 될 때도 등록이 끊기지 않게, 메모로 카드를 만들고 확인 화면에서 고치게 한다.
-      toast(`${(e as Error).message} 메모로 카드를 만들었어요. 확인 화면에서 고쳐 주세요.`);
+      toast(`${firstSentence((e as Error).message)} 대신 메모로 카드를 만들었어요. 확인 화면에서 고쳐 주세요.`);
       cards = junctions.map((j, i) => ({
         id: newId(),
         order: i + 1,

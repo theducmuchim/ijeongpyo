@@ -101,7 +101,7 @@ function Quiz({ route }: { route: Route }) {
       </div>
       {picked !== null && (
         <p className="body-medium" aria-live="polite">
-          {picked === q.answer ? "맞아요." : `정답은 ${q.answer}.`}
+          {picked === q.answer ? "맞아요." : `정답은 ${josa(q.answer, "이에요/예요")}.`}
         </p>
       )}
     </div>
@@ -489,7 +489,7 @@ export default function WalkPage() {
       <main className="screen">
         <AppBar title="걷기" back="/" />
         <div className="body">
-          <p className="body-large">이 길을 찾을 수 없어요.</p>
+          <p className="body-large">이 길을 찾을 수 없어요. 홈에서 길을 다시 골라 주세요.</p>
         </div>
       </main>
     );
@@ -562,7 +562,7 @@ export default function WalkPage() {
         {autoMode === "manual" && <p className="label-medium muted">위치가 정확하지 않아요. 카드를 직접 넘겨 주세요.</p>}
         {offRoute && (
           <div className="banner body-medium">
-            {route.kind === "planned" ? "안내하는 길" : "등록한 길"}에서 조금 멀어졌어요. 길이 헷갈리면 아래 &lsquo;길을 잃었어요&rsquo;를 누르세요.
+            {route.kind === "planned" ? "안내하는 길" : "등록한 길"}에서 조금 멀어졌어요. 길이 헷갈리면 아래 &lsquo;길을 잃었어요&rsquo;를 눌러 주세요.
           </div>
         )}
         <div className="row">
