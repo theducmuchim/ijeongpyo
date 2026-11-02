@@ -32,7 +32,22 @@ export async function askAI(system: string, images: ImagePayload[], text: string
   }
 }
 
+// 점검 주소에서 어느 모델이 답했는지 보려고 남긴다
+export const aiTrace: { model: string; ms: number; ok: boolean }[] = [];
+
 async function callModel(model: string, system: string, images: ImagePayload[], text: string): Promise<string> {
+  const t = Date.now();
+  try {
+    const out = await callModelRaw(model, system, images, text);
+    aiTrace.push({ model, ms: Date.now() - t, ok: true });
+    return out;
+  } catch (e) {
+    aiTrace.push({ model, ms: Date.now() - t, ok: false });
+    throw e;
+  }
+}
+
+async function callModelRaw(model: string, system: string, images: ImagePayload[], text: string): Promise<string> {
   const res = await getClient().models.generateContent({
     model,
     contents: [

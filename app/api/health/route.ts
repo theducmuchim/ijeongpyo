@@ -1,7 +1,10 @@
-import { askAI, isMockMode } from "@/lib/ai";
+import { aiTrace, askAI, isMockMode } from "@/lib/ai";
 import { hasStores, rankForLandmark, storesNear } from "@/lib/stores";
 import { hasTmap, pedestrianRoute, searchPlaces } from "@/lib/tmap";
+import { POST as cardsFromWalk } from "../cards-from-walk/route";
 import { POST as checkLandmark } from "../check-landmark/route";
+import { POST as replaceLandmark } from "../replace-landmark/route";
+import { POST as whereAmI } from "../where-am-i/route";
 import { POST as planRoute } from "../plan-route/route";
 
 // 바깥 서비스 점검용. 키 값은 절대 돌려주지 않는다.
@@ -27,6 +30,46 @@ export async function GET(req: Request) {
   const token = url.searchParams.get("token");
   const keys = { gemini: !isMockMode(), tmap: hasTmap(), stores: hasStores(), kakaoJs: !!process.env.NEXT_PUBLIC_KAKAO_JS_KEY };
   if (!process.env.HEALTH_TOKEN || token !== process.env.HEALTH_TOKEN) return Response.json({ keys });
+
+  // ?ai=cards|lost|fix: 체험용 사진으로 사진 AI 기능을 실제로 한 번씩 불러 본다
+  const which = url.searchParams.get("ai");
+  if (which) {
+    const photo = async (name: string) => {
+      const img = await fetch(`https://ijeongpyo-one.vercel.app/demo/${name}`, { cache: "no-store" });
+      return { base64: Buffer.from(await img.arrayBuffer()).toString("base64"), mediaType: "image/jpeg" as const };
+    };
+    const call = async (handler: (r: Request) => Promise<Response>, body: unknown) => {
+      aiTrace.length = 0;
+      const t = Date.now();
+      const r = await handler(
+        new Request("http://local/api", { method: "POST", headers: { "content-type": "application/json", "x-device-id": "health-check" }, body: JSON.stringify(body) }),
+      );
+      return { status: r.status, ms: Date.now() - t, models: [...aiTrace], result: await r.json() };
+    };
+    const cards = [
+      { order: 1, photoDescription: "왼쪽 건물 1층에 초록 간판 '꽃집 초록뜰'과 초록·흰색 줄무늬 차양. 가게 왼쪽으로 골목이 있다.", landmarkName: "초록 간판 꽃집", instruction: "초록 간판 꽃집을 끼고 왼쪽 골목으로 가세요" },
+      { order: 2, photoDescription: "왼쪽에 초록 간판 '온누리약국', 길 건너 빨간 간판 분식집. 바로 앞에 횡단보도가 있다.", landmarkName: "온누리약국", instruction: "온누리약국을 지나 횡단보도를 건너세요" },
+      { order: 3, photoDescription: "왼쪽 1층에 파란 간판 '하늘편의점'과 파란·흰색 줄무늬 차양. 오른쪽에 가로수와 가로등.", landmarkName: "파란 간판 편의점", instruction: "파란 간판 편의점 앞에서 오른쪽으로 가세요" },
+      { order: 4, photoDescription: "정면에 '한빛중학교' 글자가 있는 정문과 철문.", landmarkName: "한빛중학교 정문", instruction: "한빛중학교 정문이 보이면 도착이에요" },
+    ];
+    if (which === "cards") {
+      const notes = ["꽃집에서 왼쪽", "약국 지나서 횡단보도 건너기", "파란 편의점에서 오른쪽", "학교 정문 도착"];
+      const junctions = await Promise.all(notes.map(async (note, i) => ({ photo: await photo(`demo-${i + 1}.jpg`), note })));
+      return Response.json(await call(cardsFromWalk, { junctions }));
+    }
+    if (which === "lost") {
+      return Response.json(await call(whereAmI, { photos: [await photo("demo-lost.jpg")], cards, lastCardOrder: 2 }));
+    }
+    if (which === "fix") {
+      return Response.json(
+        await call(replaceLandmark, {
+          photo: await photo("demo-1-changed.jpg"),
+          card: { order: 1, photoDescription: cards[0].photoDescription, landmarkName: "초록 간판 꽃집", side: "left", action: "left", instruction: cards[0].instruction, userNote: "" },
+          nextInstruction: cards[1].instruction,
+        }),
+      );
+    }
+  }
 
   // ?check=1: 체험용 사진(온누리약국 간판이 있는 그림)으로 사진 확인을 실제로 한 번 해 본다
   if (url.searchParams.get("check")) {
