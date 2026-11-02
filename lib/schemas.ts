@@ -1,3 +1,4 @@
+import { tidy } from "@/lib/tone";
 import { z } from "zod";
 import type { CardDraft, CheckResult, ReplaceResult, WhereAmIResult } from "@/types";
 
@@ -43,7 +44,7 @@ const whereSchema = z.object({
 export function parseCards(raw: string, expected: number): CardDraft[] | null {
   const parsed = z.array(cardSchema).safeParse(extractJson(raw));
   if (!parsed.success || parsed.data.length !== expected) return null;
-  return parsed.data.map((c) => ({ ...c, warning: c.warning ?? null }));
+  return parsed.data.map((c) => ({ ...c, instruction: tidy(c.instruction), warning: tidy(c.warning ?? null) }));
 }
 
 export function parseWhereAmI(raw: string): WhereAmIResult | null {
@@ -52,7 +53,7 @@ export function parseWhereAmI(raw: string): WhereAmIResult | null {
   const r = parsed.data;
   // 확실하지 않은데 사진 요청이 비어 있으면 기본 요청을 채운다 (추측 안내 방지)
   if (r.confidence < 0.6 && !r.askPhoto) r.askPhoto = "다른 방향도 한 장 찍어 주세요";
-  return r;
+  return { ...r, nextStep: tidy(r.nextStep), reasonForUser: tidy(r.reasonForUser), askPhoto: tidy(r.askPhoto ?? null) };
 }
 
 const replaceSchema = z.object({
@@ -66,7 +67,8 @@ const replaceSchema = z.object({
 export function parseReplace(raw: string): ReplaceResult | null {
   const parsed = replaceSchema.safeParse(extractJson(raw));
   if (!parsed.success) return null;
-  return { ...parsed.data, warning: parsed.data.warning ?? null };
+  const r = parsed.data;
+  return { ...r, instruction: tidy(r.instruction), changeNote: tidy(r.changeNote), warning: tidy(r.warning ?? null) };
 }
 
 const planSchema = z.array(
@@ -96,5 +98,5 @@ export function parseCheck(raw: string): CheckResult | null {
   const parsed = checkSchema.safeParse(extractJson(raw));
   if (!parsed.success) return null;
   const r = parsed.data;
-  return { ...r, matched: r.matched ?? null, warning: r.warning ?? null };
+  return { ...r, matched: r.matched ?? null, instruction: tidy(r.instruction), warning: tidy(r.warning ?? null) };
 }

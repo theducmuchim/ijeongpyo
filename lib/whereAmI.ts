@@ -39,7 +39,19 @@ export async function askWhereAmI(
   for (let i = 0; i < 2; i++) {
     const raw = await askAI(WHERE_AM_I_PROMPT, photos, question);
     const result = parseWhereAmI(raw);
-    if (result) return result;
+    if (result) return fixNextStep(result, cards);
   }
   return { ...FALLBACK, fallback: true };
+}
+
+// 가벼운 모델이 nextStep에 "신호를 직접 확인하세요"만 쓰고 정작 갈 곳은 reasonForUser에 쓰는 일이 있었다.
+// 갈 곳이 빠졌으면 맞춘 카드의 안내 문장을 앞에 붙인다.
+const SIGNAL = "신호를 직접 확인하세요";
+function fixNextStep(r: WhereAmIResult, cards: CardText[]): WhereAmIResult {
+  const onlySignal = r.nextStep.replace(/[.\s]/g, "") === SIGNAL.replace(/\s/g, "");
+  if (!onlySignal) return r;
+  const card = cards.find((c) => c.order === r.matchedCardOrder);
+  const go = card?.instruction ?? (/세요/.test(r.reasonForUser) ? r.reasonForUser : null);
+  if (!go) return r;
+  return { ...r, nextStep: `${go.replace(/\.$/, "")}. ${SIGNAL}`, reasonForUser: go === r.reasonForUser ? "" : r.reasonForUser };
 }
