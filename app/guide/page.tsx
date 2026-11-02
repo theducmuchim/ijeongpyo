@@ -1,0 +1,245 @@
+import Link from "next/link";
+import { AppBar, Icon } from "@/components/ui";
+
+export const metadata = { title: "사용 설명서 · 이정표" };
+
+const SECTIONS = [
+  { id: "start", title: "시작하기 전에" },
+  { id: "record", title: "길 등록하기" },
+  { id: "photo", title: "사진과 메모 요령" },
+  { id: "review", title: "카드 확인하기" },
+  { id: "walk", title: "혼자 걷기" },
+  { id: "fix", title: "길잡이가 바뀌었을 때" },
+  { id: "lost", title: "길을 잃었을 때" },
+  { id: "guardian", title: "보호자가 알아 둘 것" },
+  { id: "backup", title: "백업과 휴대폰 바꾸기" },
+  { id: "privacy", title: "사진과 개인정보" },
+  { id: "faq", title: "자주 묻는 질문" },
+];
+
+function Sec({ n, id, title, children }: { n: number; id: string; title: string; children: React.ReactNode }) {
+  return (
+    <section id={id} className="guide-sec">
+      <h2>
+        <span className="sec-num">{n}</span>
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+const FAQ: [string, React.ReactNode][] = [
+  [
+    "카드가 저절로 안 넘어가요",
+    "건물 사이, 실내, 지하처럼 GPS가 부정확한 곳에서는 자동 넘김을 끄고 '다음 카드' 버튼으로 넘기게 돼 있어요. 위치 권한을 허용하지 않았거나, 등록할 때 위치가 기록되지 않은 길도 버튼으로 넘겨요.",
+  ],
+  [
+    "지하상가나 지하철역에서도 쓸 수 있나요?",
+    "카드를 보며 걷는 것과 '길을 잃었어요'는 돼요. 다만 GPS가 거의 잡히지 않아서 카드가 저절로 넘어가지 않아요. 지하에서는 출구 번호나 가게 간판을 길잡이로 찍어 두면 좋아요.",
+  ],
+  [
+    "인터넷이 없어도 되나요?",
+    "지금은 앱을 열 때 인터넷이 필요해요. 카드를 만들고, 길을 찾고, 길잡이를 바꾸는 것도 AI에 사진을 보내야 해서 인터넷이 있어야 해요.",
+  ],
+  [
+    "AI가 틀린 곳을 알려 주면 어떡하나요?",
+    "확실하지 않으면 추측하지 말고 사진을 더 달라고 하도록 만들었지만, 틀릴 수 있어요. 알려 준 카드의 사진과 지금 보이는 곳이 같은지 직접 비교해 보고, 다르면 '사진 한 장 더 찍기'나 '마지막 카드로 돌아가기'를 누르세요. 길을 건널 때는 항상 신호를 직접 확인하세요.",
+  ],
+  [
+    "'오늘 쓸 수 있는 횟수를 다 썼어요'가 떠요",
+    "무료 AI를 모든 사용자가 나눠 써서, 휴대폰 한 대가 하루에 AI를 부를 수 있는 횟수를 정해 뒀어요(기본 10번). 다음 날 다시 쓸 수 있어요. 그동안에도 저장한 카드로 걷는 건 돼요.",
+  ],
+  [
+    "길 이름이나 카드를 나중에 고칠 수 있나요?",
+    "걷기 화면 오른쪽 위의 연필을 누르면 카드 확인 화면이 열려요. 문장을 고치거나 사진을 다시 찍을 수 있고, 맨 아래에서 길을 지울 수도 있어요.",
+  ],
+  [
+    "체험용 길은 어떻게 지우나요?",
+    "홈에서 '체험: 학교 가는 길'을 열고, 오른쪽 위 연필 → 맨 아래 '이 길 지우기'를 누르세요.",
+  ],
+  [
+    "차를 운전할 때도 쓸 수 있나요?",
+    "걸어서 다니는 길을 위해 만들었어요. 운전할 때는 내비게이션을 쓰고, 운전 중에는 휴대폰 화면을 보지 마세요.",
+  ],
+  ["진단도 해 주나요?", "아니요. 이 앱은 진단을 하지 않아요. 생활이 많이 불편하면 신경과나 신경심리 전문가와 상담해 보세요."],
+];
+
+export default function GuidePage() {
+  return (
+    <main className="screen">
+      <AppBar title="사용 설명서" back="/" />
+      <div className="body" style={{ gap: 24 }}>
+        <div className="coach">
+          <p className="title-large">이정표는 이렇게 써요</p>
+          <p className="body-large">
+            처음 한 번은 길을 잘 아는 사람과 같이 걸으며 길을 등록하고, 그다음부터는 카드를 보며 혼자 걸어요. 길을 잃으면 주변을
+            찍어서 지금 어디쯤인지 찾아요.
+          </p>
+          <Link href="/demo" className="btn btn-filled" style={{ marginTop: 8 }}>
+            <Icon name="sparkle" size={20} /> 2분 체험해 보기
+          </Link>
+        </div>
+
+        <nav className="toc" aria-label="목차">
+          {SECTIONS.map((s, i) => (
+            <a key={s.id} href={`#${s.id}`}>
+              {i + 1}. {s.title}
+            </a>
+          ))}
+        </nav>
+
+        <Sec n={1} id="start" title="시작하기 전에">
+          <p>
+            <b>홈 화면에 추가</b>하면 앱처럼 바로 열 수 있어요.
+          </p>
+          <ul>
+            <li>아이폰(사파리): 아래 공유 버튼 → &lsquo;홈 화면에 추가&rsquo;</li>
+            <li>안드로이드(크롬): 오른쪽 위 ⋮ → &lsquo;홈 화면에 추가&rsquo; 또는 &lsquo;앱 설치&rsquo;</li>
+          </ul>
+          <p>
+            처음 쓸 때 <b>카메라</b>와 <b>위치</b> 권한을 물어요. 카메라는 꼭 필요하고, 위치는 허용하지 않아도 쓸 수 있어요. 위치가 없으면
+            카드가 저절로 넘어가지 않고 버튼으로 넘겨요.
+          </p>
+        </Sec>
+
+        <Sec n={2} id="record" title="길 등록하기">
+          <p>길을 잘 아는 보호자나 친구와 같이, 실제로 그 길을 한 번 걸으며 등록해요.</p>
+          <ol>
+            <li>홈에서 &lsquo;새 길 등록&rsquo;을 누르고 길 이름을 적어요. 예: 등굣길, 학원 가는 길</li>
+            <li>&lsquo;걷기 시작&rsquo;을 누르면 걸어간 길이 기록되기 시작해요.</li>
+            <li>갈림길에 서면 가운데 카메라 칸을 눌러 사진을 한 장 찍어요.</li>
+            <li>메모 칸에 &ldquo;꽃집에서 왼쪽&rdquo;처럼 짧게 적거나, 마이크를 누르고 말해요.</li>
+            <li>&lsquo;여기서 꺾어요&rsquo;를 누르면 갈림길 하나가 저장돼요. 아래에 사진이 하나씩 쌓여요.</li>
+            <li>도착하면 &lsquo;도착했어요&rsquo;를 눌러요. AI가 10~30초 동안 카드를 만들어요. 그동안 화면을 끄지 마세요.</li>
+          </ol>
+          <p>
+            <b>어디서 찍나요?</b> 방향을 바꾸는 곳, 비슷한 골목이 여러 개라 헷갈리는 곳, 길을 건너는 곳, 그리고 도착 지점에서 찍어요.
+            갈림길은 20곳까지 남길 수 있어요.
+          </p>
+        </Sec>
+
+        <Sec n={3} id="photo" title="사진과 메모 요령">
+          <div className="good-bad">
+            <div className="good">
+              <p className="title-medium">이렇게 찍어요</p>
+              <p className="body-medium">간판 글자가 읽히게</p>
+              <p className="body-medium">오래 그 자리에 있을 가게나 건물</p>
+              <p className="body-medium">걸어갈 방향을 보고</p>
+            </div>
+            <div className="bad">
+              <p className="title-medium">피해요</p>
+              <p className="body-medium">사람 얼굴, 차 번호판, 문패</p>
+              <p className="body-medium">현수막, 포스터, 주차된 차</p>
+              <p className="body-medium">흔들리거나 너무 가까운 사진</p>
+            </div>
+          </div>
+          <p>
+            메모는 <b>무엇을 보고 어느 쪽으로</b> 가는지 적어요. &ldquo;동쪽으로&rdquo;, &ldquo;50m 직진&rdquo; 대신 &ldquo;약국 지나서 왼쪽&rdquo;처럼
+            눈에 보이는 것으로 적으면 카드가 더 정확해요.
+          </p>
+        </Sec>
+
+        <Sec n={4} id="review" title="카드 확인하기">
+          <p>AI가 만든 카드를 같이 걸은 사람과 하나씩 읽어 봐요.</p>
+          <ul>
+            <li>문장이 어색하면 눌러서 직접 고쳐요. 본인이 평소 쓰는 말로 바꾸면 더 잘 읽혀요.</li>
+            <li>&lsquo;사진을 다시 찍어 주세요&rsquo;가 붙은 카드는 사진이 흐리거나 길잡이가 가려진 거예요. &lsquo;다시 찍기&rsquo;를 누르세요.</li>
+            <li>사진을 다시 찍으면 AI가 사진 설명과 문장도 새로 써요.</li>
+            <li>다 봤으면 &lsquo;저장하기&rsquo;를 눌러요. 저장한 뒤에도 걷기 화면의 연필로 다시 고칠 수 있어요.</li>
+          </ul>
+        </Sec>
+
+        <Sec n={5} id="walk" title="혼자 걷기">
+          <p>홈에서 길을 누르면 1번 카드부터 시작해요. 카드 한 장이 갈림길 하나예요.</p>
+          <ul>
+            <li>다음 갈림길 30m 안에 들어가면 카드가 저절로 넘어가고, 진동과 함께 문장을 읽어 줘요.</li>
+            <li>위치가 부정확하면 &ldquo;카드를 직접 넘겨 주세요&rdquo;라고 떠요. 그때는 &lsquo;다음 카드&rsquo;를 눌러요.</li>
+            <li>등록한 길에서 50m 넘게, 20초 넘게 벗어나면 화면에 알려 줘요. 보호자에게 저절로 알리지는 않아요.</li>
+            <li>걷는 동안 화면이 꺼지지 않아요. 배터리가 평소보다 빨리 줄 수 있어요.</li>
+            <li>마지막 카드에서 &lsquo;도착했어요&rsquo;를 누르면 끝나요. 돌아오는 길은 보이는 풍경이 달라서 따로 등록해야 해요.</li>
+          </ul>
+          <p>진동과 음성 안내는 설정에서 끌 수 있어요.</p>
+        </Sec>
+
+        <Sec n={6} id="fix" title="길잡이가 바뀌었을 때">
+          <p>가게가 문을 닫거나 간판이 바뀌면 카드의 길잡이가 안 보일 수 있어요.</p>
+          <ol>
+            <li>걷기 화면에서 &lsquo;길잡이가 안 보여요&rsquo;를 눌러요.</li>
+            <li>&lsquo;이 자리 다시 찍기&rsquo;로 지금 모습을 찍어요.</li>
+            <li>AI가 새 길잡이와 문장을 골라 줘요. 전과 후 사진을 비교하고, 문장은 고쳐도 돼요.</li>
+            <li>&lsquo;이걸로 바꾸기&rsquo;를 누르면 카드가 바뀌고, 보던 카드에서 다시 걸어요.</li>
+          </ol>
+          <p>꺾는 방향은 바뀌지 않아요. 길 자체가 바뀌었으면 길을 새로 등록하세요.</p>
+        </Sec>
+
+        <Sec n={7} id="lost" title="길을 잃었을 때">
+          <ol>
+            <li>걷기 화면 아래의 &lsquo;길을 잃었어요&rsquo;를 눌러요.</li>
+            <li>간판이나 출구 번호가 보이게 주변을 찍어요.</li>
+            <li>AI가 등록한 카드와 비교해서 어느 카드 근처인지, 다음에 할 일 하나를 알려 줘요.</li>
+            <li>확실하지 않으면 다른 방향을 더 찍어 달라고 해요. 세 번까지 찍을 수 있어요.</li>
+            <li>세 번 찍어도 모르면 마지막으로 지나간 카드의 사진을 보여 줘요. 그곳으로 돌아가 보세요.</li>
+          </ol>
+          <p>
+            &lsquo;n번 카드부터 다시 걷기&rsquo;를 누르면 그 카드에서 이어 걸어요. 설정에서 <b>보호자에게 위치 보내기</b>를 켜 두면, 이
+            화면에 버튼이 생겨요. 누르면 문자 앱이 지도 링크가 담긴 채로 열리고, 보내기는 직접 눌러야 해요.
+          </p>
+        </Sec>
+
+        <Sec n={8} id="guardian" title="보호자가 알아 둘 것">
+          <ul>
+            <li>처음 몇 번은 뒤에서 조금 떨어져 같이 걸어 주세요. 카드가 어디서 넘어가는지 함께 확인하면 좋아요.</li>
+            <li>짧고 자주 다니는 길부터 등록하세요. 익숙해지면 길을 늘려요.</li>
+            <li>공사나 계절 때문에 풍경이 바뀌면 같이 &lsquo;길잡이 바꾸기&rsquo;를 해 주세요.</li>
+            <li>길을 잃는 걸 부끄러워하는 사람이 많아요. 탓하지 말고, 어느 카드에서 헷갈렸는지 같이 보고 문장을 고쳐 주세요.</li>
+            <li>설정의 &lsquo;보호자에게 위치 보내기&rsquo;에 이름과 전화번호를 넣어 두세요.</li>
+          </ul>
+        </Sec>
+
+        <Sec n={9} id="backup" title="백업과 휴대폰 바꾸기">
+          <p>
+            길과 사진은 서버가 아니라 이 휴대폰 안에만 저장돼요. 휴대폰을 바꾸거나 브라우저 기록을 지우면 사라지니, 설정 → 백업에서
+            &lsquo;백업하기&rsquo;로 파일을 만들어 두세요. 새 휴대폰에서는 &lsquo;불러오기&rsquo;로 그 파일을 고르면 돼요.
+          </p>
+          <p>백업 파일에는 사진과 다닌 길이 들어 있어요. 다른 사람에게 보내지 마세요.</p>
+        </Sec>
+
+        <Sec n={10} id="privacy" title="사진과 개인정보">
+          <ul>
+            <li>길을 등록할 때, 길을 잃었을 때, 길잡이를 바꿀 때 사진을 구글 Gemini로 보내요.</li>
+            <li>무료 서비스라서 구글이 보낸 사진을 서비스 개선에 쓸 수 있어요. 그래서 얼굴, 집 주소, 문패가 찍히지 않게 해 주세요.</li>
+            <li>보내기 전에 사진 크기를 줄이고, 사진 속 촬영 위치 정보는 지워요.</li>
+            <li>사진, 카드, 걸은 길, 보호자 번호는 이 휴대폰에만 저장돼요. 이정표 서버는 아무것도 저장하지 않아요.</li>
+          </ul>
+        </Sec>
+
+        <Sec n={11} id="faq" title="자주 묻는 질문">
+          <div className="faq">
+            {FAQ.map(([q, a]) => (
+              <details key={q}>
+                <summary>{q}</summary>
+                <div>{a}</div>
+              </details>
+            ))}
+          </div>
+        </Sec>
+
+        <div className="help-row">
+          <Link href="/demo" className="pressable">
+            <span className="avatar">
+              <Icon name="sparkle" />
+            </span>
+            <span className="title-medium">체험해 보기</span>
+          </Link>
+          <Link href="/about" className="pressable">
+            <span className="avatar">
+              <Icon name="walk" />
+            </span>
+            <span className="title-medium">DTD 알아보기</span>
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+}

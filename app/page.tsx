@@ -36,6 +36,9 @@ export default function Home() {
             <p className="body-medium muted">
               자주 다니는 길을 보호자나 친구와 한 번 같이 걸으며 등록하세요. 갈림길마다 사진 한 장과 메모를 남기면 돼요.
             </p>
+            <Link href="/demo" className="btn btn-tonal" style={{ marginTop: 12 }}>
+              <Icon name="sparkle" size={20} /> 먼저 체험해 보기
+            </Link>
           </div>
         )}
 
@@ -58,6 +61,23 @@ export default function Home() {
             <Icon name="forward" />
           </Link>
         ))}
+        </div>
+
+        <div className="help-row">
+          <Link href="/demo" className="pressable">
+            <span className="avatar">
+              <Icon name="sparkle" />
+            </span>
+            <span className="title-medium">체험해 보기</span>
+            <span className="body-medium muted">예시 사진으로 2분</span>
+          </Link>
+          <Link href="/guide" className="pressable">
+            <span className="avatar">
+              <Icon name="flag" />
+            </span>
+            <span className="title-medium">사용 설명서</span>
+            <span className="body-medium muted">기능별 쓰는 법</span>
+          </Link>
         </div>
 
         <div className="surface-card tonal-card">

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppBar, Icon, useConfirm } from "@/components/ui";
 import { makeBackup, restoreBackup } from "@/lib/backup";
@@ -260,6 +261,22 @@ export default function SettingsPage() {
         <Row title="글씨 크게" desc="모든 화면의 글씨를 키워요">
           <Switch label="글씨 크게" checked={s.largeText} onChange={(v) => set({ largeText: v })} />
         </Row>
+
+        <p className="section-label label-large">도움말</p>
+        <Link href="/guide" className="setting-row pressable">
+          <div className="text">
+            <p className="body-large">사용 설명서</p>
+            <p className="body-medium muted">기능별 쓰는 법과 자주 묻는 질문</p>
+          </div>
+          <Icon name="forward" />
+        </Link>
+        <Link href="/demo" className="setting-row pressable">
+          <div className="text">
+            <p className="body-large">체험해 보기</p>
+            <p className="body-medium muted">예시 사진으로 등록부터 도착까지</p>
+          </div>
+          <Icon name="forward" />
+        </Link>
 
         <BackupSection />
         <TestSection enabled={s.usageLog} onToggle={(v) => set({ usageLog: v })} />

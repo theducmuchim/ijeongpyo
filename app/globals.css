@@ -851,3 +851,184 @@ textarea.field { resize: vertical; min-height: 64px; }
     display: none;
   }
 }
+
+/* ───────────── 체험하기 ───────────── */
+.screen-in { animation: rise-in var(--dur-medium) var(--ease-decel) both; }
+.step-head { display: flex; flex-direction: column; gap: 8px; }
+.step-dots { display: flex; gap: 6px; }
+.step-dots span {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-container-highest);
+  transition: background var(--dur-medium);
+}
+.step-dots span.done { background: var(--primary); }
+.step-dots span.now { background: var(--primary); opacity: 0.55; }
+.coach {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 24px;
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.tips { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tips li { display: flex; align-items: center; gap: 8px; }
+.demo-frame {
+  border: 1px solid var(--outline-variant);
+  border-radius: 28px;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: 0 2px 10px var(--shadow);
+}
+.demo-frame-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--surface-container);
+}
+.demo-frame-body { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+.demo-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 44px;
+}
+.caret {
+  width: 2px;
+  height: 18px;
+  background: var(--primary);
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+.num-badge {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--primary);
+  color: var(--on-primary);
+  display: grid;
+  place-items: center;
+}
+.demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.demo-grid img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 16px; display: block; }
+.gps-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--surface-container-high);
+}
+.gps-track { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-container-highest); overflow: hidden; }
+.gps-track span { display: block; height: 100%; background: var(--primary); transition: width 400ms linear; }
+.buzz-chip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--inverse-surface);
+  color: var(--inverse-on-surface);
+  animation: buzz-chip 1.6s var(--ease-standard) both;
+}
+@keyframes buzz-chip {
+  0% { opacity: 0; transform: translateY(-6px); }
+  10%, 70% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+.demo-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0 auto;
+  max-width: 480px;
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px calc(12px + var(--safe-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--outline-variant);
+  z-index: 5;
+}
+.demo-nav > * { flex: 1; }
+
+/* ───────────── 사용 설명서 ───────────── */
+.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+.toc a {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--outline-variant);
+  font-size: calc(14px * var(--scale));
+  font-weight: 500;
+}
+.guide-sec { display: flex; flex-direction: column; gap: 10px; scroll-margin-top: 80px; }
+.guide-sec h2 { font-size: calc(20px * var(--scale)); font-weight: 700; margin: 8px 0 0; display: flex; align-items: center; gap: 10px; }
+.guide-sec h2 .sec-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--primary);
+  color: var(--on-primary);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  flex: none;
+}
+.guide-sec ol, .guide-sec ul { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+.guide-sec li { font-size: calc(16px * var(--scale)); line-height: 1.55; }
+.guide-sec p { font-size: calc(16px * var(--scale)); line-height: 1.6; margin: 0; }
+.good-bad { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.good-bad > div { border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+.good-bad .good { background: var(--primary-container); color: var(--on-primary-container); }
+.good-bad .bad { background: var(--surface-container-high); }
+.faq { display: flex; flex-direction: column; gap: 8px; }
+.faq details {
+  border-radius: 16px;
+  background: var(--surface-container-low);
+  overflow: hidden;
+}
+.faq summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  font-weight: 500;
+  font-size: calc(16px * var(--scale));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--dur-short) var(--ease-standard);
+  flex: none;
+}
+.faq details[open] summary::after { transform: rotate(-135deg); }
+.faq details > div { padding: 0 16px 14px; color: var(--on-surface-variant); line-height: 1.6; font-size: calc(15px * var(--scale)); }
+.help-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.help-row a {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--surface-container-low);
+}
+.help-row a .avatar { width: 40px; height: 40px; }
