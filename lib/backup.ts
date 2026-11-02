@@ -22,6 +22,11 @@ const cardSchema = z.object({
   warning: z.string().nullable().optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),
+  source: z.enum(["photo", "draft"]).optional(),
+  candidates: z
+    .array(z.object({ name: z.string(), category: z.string().optional(), floor: z.string().optional(), lat: z.number(), lng: z.number() }))
+    .optional(),
+  checkedAt: z.string().optional(),
 });
 const routeSchema = z.object({
   id: z.string(),
@@ -31,6 +36,11 @@ const routeSchema = z.object({
   cards: z.array(cardSchema).min(1),
   track: z.array(z.tuple([z.number(), z.number()])).optional(),
   status: z.enum(["draft", "ready"]),
+  kind: z.enum(["walked", "planned"]).optional(),
+  destName: z.string().optional(),
+  dest: z.object({ lat: z.number(), lng: z.number() }).optional(),
+  practiceLevel: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
+  cleanArrivals: z.number().optional(),
 });
 const backupSchema = z.object({
   kind: z.literal(BACKUP_KIND),
@@ -45,6 +55,7 @@ export async function makeBackup() {
   const photos: Record<string, string> = {};
   for (const r of routes) {
     for (const c of r.cards) {
+      if (!c.photoId) continue; // 처음 가는 길의 사진 없는 카드
       const row = await db.photos.get(c.photoId);
       if (row) photos[c.photoId] = (await blobToPayload(row.blob)).base64;
     }

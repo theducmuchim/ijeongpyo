@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { CardDraft, ReplaceResult, WhereAmIResult } from "@/types";
+import type { CardDraft, CheckResult, ReplaceResult, WhereAmIResult } from "@/types";
 
 // AI가 가끔 앞뒤에 설명을 붙이거나 ```json 으로 감싸서 답할 때를 대비해 JSON 부분만 꺼낸다.
 function extractJson(raw: string): unknown {
@@ -67,4 +67,34 @@ export function parseReplace(raw: string): ReplaceResult | null {
   const parsed = replaceSchema.safeParse(extractJson(raw));
   if (!parsed.success) return null;
   return { ...parsed.data, warning: parsed.data.warning ?? null };
+}
+
+const planSchema = z.array(
+  z.object({
+    order: z.number().int().min(1),
+    candidates: z.array(z.string()).max(5).default([]),
+    instruction: z.string().min(1).max(80),
+  }),
+);
+
+export function parsePlan(raw: string, expected: number) {
+  const parsed = planSchema.safeParse(extractJson(raw));
+  if (!parsed.success || parsed.data.length !== expected) return null;
+  return parsed.data;
+}
+
+const checkSchema = z.object({
+  seen: z.boolean(),
+  matched: z.string().nullable().optional(),
+  photoDescription: z.string().min(1),
+  landmark: z.object({ name: z.string().min(1), side }),
+  instruction: z.string().min(1).max(80),
+  warning: z.string().nullable().optional(),
+});
+
+export function parseCheck(raw: string): CheckResult | null {
+  const parsed = checkSchema.safeParse(extractJson(raw));
+  if (!parsed.success) return null;
+  const r = parsed.data;
+  return { ...r, matched: r.matched ?? null, warning: r.warning ?? null };
 }

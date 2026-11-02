@@ -90,6 +90,9 @@ function TestSection({ enabled, onToggle }: { enabled: boolean; onToggle: (v: bo
         ["3번 찍어도 못 찾은 횟수", summary.lostGaveUp],
         ["찾을 때까지 찍은 사진(평균)", summary.avgPhotosToFind ?? "-"],
         ["길잡이를 바꾼 횟수", summary.landmarkReplaced],
+        ["처음 가는 길 초안 만든 횟수", summary.plansMade],
+        ["처음 길에서 길잡이가 보인/안 보인 횟수", `${summary.landmarkSeen} / ${summary.landmarkMissing}`],
+        ["도움 요청 화면 연 횟수", summary.helpCard],
         ["보호자에게 위치 보낸 횟수", summary.guardianShare],
       ]
     : [];

@@ -42,6 +42,8 @@ export async function applyReplacement(
     landmark: r?.landmark ?? old.landmark,
     instruction: (instruction ?? r?.instruction ?? old.instruction).trim() || old.instruction,
     warning: null,
+    source: "photo" as const,
+    checkedAt: old.source === "draft" ? new Date().toISOString() : old.checkedAt,
   };
   const next: Route = { ...route, cards: route.cards.map((c, i) => (i === index ? card : c)) };
   await db.transaction("rw", db.routes, db.photos, async () => {

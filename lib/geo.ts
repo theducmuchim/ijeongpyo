@@ -25,3 +25,11 @@ export function distanceToTrackM(lat: number, lng: number, track: [number, numbe
   }
   return best;
 }
+
+// a에서 b로 가는 방향 (북쪽 0°, 시계 방향). 로드뷰를 걸어갈 쪽으로 돌려 둘 때 쓴다.
+export function bearingDeg(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const y = Math.sin(toRad(lng2 - lng1)) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lng2 - lng1));
+  return (((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
+}

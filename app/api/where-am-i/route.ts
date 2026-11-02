@@ -1,11 +1,13 @@
 import { friendlyError, isMockMode } from "@/lib/ai";
+import { distanceM } from "@/lib/geo";
+import { hasStores, rankForLandmark, storesNear } from "@/lib/stores";
 import { checkLimit } from "@/lib/rateLimit";
 import { FALLBACK, askWhereAmI, type CardText } from "@/lib/whereAmI";
 import type { ImagePayload, WhereAmIResult } from "@/types";
 
 export const maxDuration = 30;
 
-type Body = { photos: ImagePayload[]; cards: CardText[]; lastCardOrder: number };
+type Body = { photos: ImagePayload[]; cards: CardText[]; lastCardOrder: number; gps?: { lat: number; lng: number } | null };
 
 export async function POST(req: Request) {
   const deviceId = req.headers.get("x-device-id");
@@ -44,7 +46,24 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await askWhereAmI(photos, cards, last);
+    // GPS가 있으면 각 카드 지점까지 거리와, 지금 위치 주변 가게를 함께 보낸다 (사진 없는 처음 가는 길에서 특히 필요)
+    const lines: string[] = [];
+    const g = body.gps;
+    if (g && Number.isFinite(g.lat) && Number.isFinite(g.lng)) {
+      const d = cards
+        .filter((c) => Number.isFinite(c.lat) && Number.isFinite(c.lng))
+        .map((c) => `${c.order}번 ${Math.round(distanceM(g.lat, g.lng, c.lat!, c.lng!))}m`);
+      if (d.length) lines.push(`지금 GPS 위치에서 각 카드 지점까지 거리: ${d.join(", ")}`);
+      if (hasStores()) {
+        try {
+          const near = rankForLandmark(await storesNear(g.lat, g.lng, 100, 120), 15);
+          if (near.length) lines.push(`지금 위치 반경 100m 가게: ${near.map((s) => `${s.name}(${s.dist}m)`).join(", ")}`);
+        } catch (e) {
+          console.error("[where-am-i] 상가정보", String((e as Error).message).slice(0, 200));
+        }
+      }
+    }
+    const result = await askWhereAmI(photos, cards, last, lines.join("\n"));
     delete result.fallback;
     return Response.json(result);
   } catch (e) {

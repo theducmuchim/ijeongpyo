@@ -28,6 +28,10 @@ export type UsageSummary = {
   avgPhotosToFind: number | null; // 찾을 때까지 평균 몇 장 찍었나
   guardianShare: number;
   landmarkReplaced: number; // 길잡이를 바꾼 횟수
+  plansMade: number; // 처음 가는 길 초안을 만든 횟수
+  landmarkSeen: number; // 처음 길에서 길잡이가 보인 횟수
+  landmarkMissing: number; // 처음 길에서 길잡이가 안 보인 횟수
+  helpCard: number; // 도움 요청 화면을 연 횟수
   firstAt: string | null;
   lastAt: string | null;
 };
@@ -48,6 +52,10 @@ export function summarize(events: UsageEvent[]): UsageSummary {
       : null,
     guardianShare: count("guardian_share"),
     landmarkReplaced: count("landmark_replaced"),
+    plansMade: count("plan_made"),
+    landmarkSeen: count("landmark_seen"),
+    landmarkMissing: count("landmark_missing"),
+    helpCard: count("help_card"),
     firstAt: events[0]?.at ?? null,
     lastAt: events.at(-1)?.at ?? null,
   };

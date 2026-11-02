@@ -19,3 +19,26 @@ export function takeResume(routeId: string): number | null {
     return null;
   }
 }
+
+// 이번 걷기에서 '길을 잃었어요'를 눌렀는지 (연습 모드: 길을 잃으면 그 걷기는 '전부 보기'로)
+const lostKey = (routeId: string) => `ijeongpyo.walklost.${routeId}`;
+
+export function markLost(routeId: string) {
+  try {
+    sessionStorage.setItem(lostKey(routeId), "1");
+  } catch {}
+}
+
+export function wasLost(routeId: string): boolean {
+  try {
+    return sessionStorage.getItem(lostKey(routeId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function clearLost(routeId: string) {
+  try {
+    sessionStorage.removeItem(lostKey(routeId));
+  } catch {}
+}

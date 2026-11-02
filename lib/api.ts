@@ -1,7 +1,7 @@
 "use client";
 
 import { deviceId } from "@/lib/settings";
-import type { Action, CardDraft, ImagePayload, ReplaceResult, Side, WhereAmIResult } from "@/types";
+import type { Action, CardDraft, CheckResult, ImagePayload, Place, PlanResult, ReplaceResult, Side, WhereAmIResult } from "@/types";
 
 // 휴대폰은 AI나 TMAP을 직접 부르지 않고 항상 우리 서버 주소만 부른다.
 async function post<T>(path: string, body: unknown): Promise<T> {
@@ -22,8 +22,9 @@ export const requestCards = (junctions: { photo: ImagePayload; note: string }[])
 
 export const requestWhereAmI = (body: {
   photos: ImagePayload[];
-  cards: { order: number; photoDescription: string; landmarkName: string; instruction: string }[];
+  cards: { order: number; photoDescription: string; landmarkName: string; instruction: string; lat?: number; lng?: number }[];
   lastCardOrder: number;
+  gps?: { lat: number; lng: number } | null;
 }) => post<WhereAmIResult & { error?: string }>("/api/where-am-i", body);
 
 export const requestReplace = (body: {
@@ -40,3 +41,17 @@ export const requestReplace = (body: {
   prevInstruction?: string;
   nextInstruction?: string;
 }) => post<ReplaceResult>("/api/replace-landmark", body);
+
+export const requestPlaces = (q: string, lat?: number, lng?: number) =>
+  post<{ places: Place[]; mock?: boolean }>("/api/search-place", { q, lat, lng });
+
+export const requestPlan = (body: { start: { lat: number; lng: number }; end: { lat: number; lng: number; name: string } }) =>
+  post<PlanResult>("/api/plan-route", body);
+
+export const requestCheck = (body: {
+  photo: ImagePayload;
+  expected: string | null; // 찾는 길잡이 이름. 후보가 다 안 보였으면 null (새로 골라 달라)
+  candidates: string[];
+  action: Action;
+  instruction: string;
+}) => post<CheckResult>("/api/check-landmark", body);

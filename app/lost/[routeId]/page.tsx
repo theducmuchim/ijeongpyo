@@ -1,17 +1,30 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AiWaiting, AppBar, CameraInput, Icon, MockBadge, PhotoView } from "@/components/ui";
 import { requestWhereAmI } from "@/lib/api";
 import { db } from "@/lib/db";
 import { blobToPayload, shrinkPhoto } from "@/lib/image";
-import { setResume } from "@/lib/resume";
+import { markLost, setResume } from "@/lib/resume";
 import { readLastCardOrder, useSettings } from "@/lib/settings";
 import { logEvent } from "@/lib/usageLog";
 import type { ImagePayload, Route, WhereAmIResult } from "@/types";
 
 const MAX_TRIES = 3;
+
+// 지금 위치 (5초 안에 못 잡으면 없이 보낸다). 카드 지점까지 거리를 AI가 참고한다.
+function currentGps(): Promise<{ lat: number; lng: number } | null> {
+  return new Promise((resolve) => {
+    if (!("geolocation" in navigator)) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve(p.coords.accuracy <= 100 ? { lat: p.coords.latitude, lng: p.coords.longitude } : null),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 10000 },
+    );
+  });
+}
 
 export default function LostPage() {
   const { routeId } = useParams<{ routeId: string }>();
@@ -32,6 +45,7 @@ export default function LostPage() {
       setRoute(r ?? null);
       if (r && !opened.current) {
         opened.current = true;
+        markLost(r.id);
         logEvent(r.id, "lost_open");
       }
     });
@@ -54,11 +68,16 @@ export default function LostPage() {
       const res = await requestWhereAmI({
         photos: all,
         lastCardOrder: lastOrder,
+        gps: await currentGps(),
         cards: route.cards.map((c) => ({
           order: c.order,
-          photoDescription: c.photoDescription,
+          // 사진 없는 처음 가는 길 카드는 사진 설명 대신 길잡이 후보를 보낸다
+          photoDescription:
+            c.photoDescription || `사진 없음. 길잡이 후보: ${(c.candidates ?? []).map((x) => x.name).join(", ") || "없음"}`,
           landmarkName: c.landmark.name,
           instruction: c.instruction,
+          lat: c.lat,
+          lng: c.lng,
         })),
       });
       setResult(res);
@@ -194,6 +213,22 @@ export default function LostPage() {
         <button className="btn btn-outlined" onClick={() => backTo(lastCard.order)}>
           마지막 카드로 돌아가기
         </button>
+        {route.kind === "planned" && route.dest && (
+          <button
+            className="btn btn-outlined"
+            onClick={() => {
+              try {
+                sessionStorage.setItem("ijeongpyo.planDest", JSON.stringify({ name: route.destName ?? route.name, ...route.dest }));
+              } catch {}
+              router.push("/plan");
+            }}
+          >
+            여기서 다시 길 찾기
+          </button>
+        )}
+        <Link href={`/ask/${route.id}`} className="btn btn-outlined">
+          지나가는 사람에게 물어보기
+        </Link>
         {settings?.guardianShare && (
           <button className="btn btn-text label-large" style={{ alignSelf: "center" }} onClick={shareLocation}>
             {settings.guardianName ? `${settings.guardianName}에게` : "보호자에게"} 위치 보내기

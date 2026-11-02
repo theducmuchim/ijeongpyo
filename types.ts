@@ -7,7 +7,18 @@ export type Route = {
   cards: Card[]; // 순서대로 넘길 카드들
   track?: [number, number][]; // 등록할 때 실제로 걸은 GPS 기록 [경도, 위도]
   status: "draft" | "ready"; // draft = 카드 확인 전
+  kind?: "walked" | "planned"; // 걸어서 등록 / 처음 가는 길(지도 데이터 초안). 없으면 walked
+  destName?: string; // 도착지 이름 (도움 요청 화면에 씀)
+  practiceLevel?: PracticeLevel; // 연습 모드 단계. 없으면 1
+  cleanArrivals?: number; // 길을 잃지 않고 도착한 횟수 (지금 단계에서)
+  dest?: { lat: number; lng: number }; // 처음 가는 길의 도착지 좌표 ('여기서 다시 시작'에 씀)
 };
+
+// 연습 모드: 1 전부 보기, 2 문장만, 3 꺾는 곳에서만
+export type PracticeLevel = 1 | 2 | 3;
+
+// 처음 가는 길의 길잡이 후보 (상가정보 공공데이터에서 온 가게)
+export type Candidate = { name: string; category?: string; floor?: string; lat: number; lng: number };
 
 export type Side = "left" | "right" | "ahead";
 export type Action = "straight" | "left" | "right" | "arrive";
@@ -25,6 +36,9 @@ export type Card = {
   warning?: string | null; // 사진을 다시 찍으라는 경고
   lat?: number; // 갈림길 위치 (GPS가 잡힐 때만)
   lng?: number;
+  source?: "photo" | "draft"; // 사진으로 등록 / 지도 데이터 초안(아직 사진 없음). 없으면 photo
+  candidates?: Candidate[]; // 초안 카드의 길잡이 후보 (첫 번째가 지금 길잡이)
+  checkedAt?: string; // 처음 걸을 때 길잡이를 확인한 시각
 };
 
 // 등록 중에 모으는 갈림길 하나 (아직 AI가 정리하기 전)
@@ -70,7 +84,12 @@ export type UsageEventType =
   | "lost_found" // AI가 확실하게 답했다 (detail: 그때까지 찍은 사진 수)
   | "lost_gave_up" // 3번 찍어도 못 찾았다
   | "guardian_share" // 보호자에게 위치 보내기를 눌렀다
-  | "landmark_replaced"; // 길잡이를 새 사진으로 바꿨다
+  | "landmark_replaced" // 길잡이를 새 사진으로 바꿨다
+  | "plan_made" // 처음 가는 길 카드 초안을 만들었다
+  | "landmark_seen" // 처음 길에서 길잡이가 보였다
+  | "landmark_missing" // 처음 길에서 길잡이가 안 보였다
+  | "help_card" // 도움 요청 화면을 열었다
+  | "practice_up"; // 연습 모드 단계를 올렸다
 
 export type UsageEvent = {
   id?: number;
@@ -86,6 +105,38 @@ export type ReplaceResult = {
   landmark: { name: string; side: Side };
   instruction: string;
   changeNote: string;
+  warning: string | null;
+  mock?: boolean;
+};
+
+// 처음 가는 길: 카드 초안 만들기 API의 답
+export type PlanCard = {
+  order: number;
+  action: Action;
+  instruction: string;
+  landmark: { name: string; side: Side };
+  candidates: Candidate[];
+  lat: number;
+  lng: number;
+};
+export type PlanResult = {
+  cards: PlanCard[];
+  track: [number, number][]; // [경도, 위도]
+  totalDistance: number; // m
+  totalTime: number; // 초
+  mock?: boolean;
+  missing?: string[]; // 시험 모드일 때 빠진 키: TMAP, 상가정보, AI
+};
+
+export type Place = { name: string; address: string; lat: number; lng: number };
+
+// 처음 길에서 '보여요'로 찍은 사진 확인 결과
+export type CheckResult = {
+  seen: boolean; // 기대한 길잡이(또는 후보 중 하나)가 사진에 보이는가
+  matched: string | null; // 보인 길잡이 이름
+  photoDescription: string;
+  landmark: { name: string; side: Side };
+  instruction: string;
   warning: string | null;
   mock?: boolean;
 };

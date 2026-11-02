@@ -1032,3 +1032,54 @@ textarea.field { resize: vertical; min-height: 64px; }
   background: var(--surface-container-low);
 }
 .help-row a .avatar { width: 40px; height: 40px; }
+
+/* ───────────── 도움 요청 화면 ───────────── */
+.ask { background: var(--surface); }
+.ask-top { display: flex; justify-content: space-between; padding: calc(8px + var(--safe-top)) 4px 0; }
+.ask-card {
+  flex: 1;
+  margin: 8px 16px;
+  border-radius: 28px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+  animation: pop-in var(--dur-medium) var(--ease-decel) both;
+}
+.ask-lead { font-size: calc(26px * var(--scale)); font-weight: 500; margin: 0; }
+.ask-main { font-size: calc(36px * var(--scale)); line-height: 1.3; font-weight: 700; margin: 0; word-break: keep-all; }
+.ask-main b { color: var(--primary); }
+:root[data-theme="dark"] .ask-main b { color: var(--on-primary-container); text-decoration: underline; }
+.ask-thanks { font-size: calc(22px * var(--scale)); margin: 0; }
+
+/* ───────────── 처음 가는 길·연습 모드 ───────────── */
+.draft-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border-radius: 24px;
+  border: 2px dashed var(--outline-variant);
+  background: var(--surface-container-low);
+}
+.draft-name { font-size: calc(30px * var(--scale)); font-weight: 700; line-height: 1.25; margin: 0; word-break: keep-all; }
+.practice-quiet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 40px 20px;
+  border-radius: 24px;
+  background: var(--surface-container-low);
+  color: var(--on-surface);
+}
+.practice-quiet svg { color: var(--primary); }
+.practice-hidden { border: none; cursor: pointer; color: var(--on-surface-variant); }
+.roadview-wrap { position: relative; }
+.roadview { width: 100%; height: 220px; border-radius: 16px; overflow: hidden; background: var(--surface-container-highest); }
+.roadview-wrap .roadview-msg { position: absolute; inset: 0 0 22px; display: grid; place-items: center; }
+.roadview-msg { padding: 16px; border-radius: 16px; background: var(--surface-container-high); text-align: center; }

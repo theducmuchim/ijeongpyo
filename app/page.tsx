@@ -55,13 +55,24 @@ export default function Home() {
             <span className="text">
               <p className="title-medium">{r.name}</p>
               <p className="body-medium muted">
-                카드 {r.cards.length}장 · {r.status === "ready" ? ago(r.lastWalkedAt) : "카드 확인 전"}
+                카드 {r.cards.length}장 · {r.status !== "ready" ? "카드 확인 전" : r.kind === "planned" && r.cards.some((c) => c.source === "draft" && !c.checkedAt) ? `처음 가는 길 · 사진 ${r.cards.filter((c) => c.source !== "draft" || c.checkedAt).length}/${r.cards.length}` : ago(r.lastWalkedAt)}
               </p>
             </span>
             <Icon name="forward" />
           </Link>
         ))}
         </div>
+
+        <Link href="/plan" className="list-row" style={{ background: "var(--secondary-container)", color: "var(--on-secondary-container)" }}>
+          <span className="avatar">
+            <Icon name="flag" />
+          </span>
+          <span className="text">
+            <p className="title-medium">처음 가는 길</p>
+            <p className="body-medium">도착지만 고르면 카드 초안을 만들어요</p>
+          </span>
+          <Icon name="forward" />
+        </Link>
 
         <div className="help-row">
           <Link href="/demo" className="pressable">

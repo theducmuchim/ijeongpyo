@@ -53,6 +53,7 @@ npm run dev
 1. 이 폴더를 GitHub 저장소로 올립니다. (`.env.local`은 자동으로 빠집니다)
 2. https://vercel.com 에서 그 저장소를 가져옵니다(Import).
 3. Settings → Environment Variables에 `GEMINI_API_KEY`를 넣습니다. 나머지는 `.env.example`을 보고 필요하면 넣습니다.
+   처음 가는 길을 진짜 데이터로 쓰려면 `TMAP_APP_KEY`, `DATA_GO_KR_KEY`, `NEXT_PUBLIC_KAKAO_JS_KEY`도 넣습니다. 없으면 예시 경로로 돌아갑니다.
 4. Deploy를 누르면 `https://...vercel.app` 주소가 생깁니다. 휴대폰에서 열고 "홈 화면에 추가"를 하면 앱처럼 쓸 수 있습니다.
 
 Vercel에 올리면 서버가 자주 새로 켜지기 때문에, 하루 사용 횟수를 정확히 세려면 Upstash Redis(무료)를 연결해 `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`을 넣어 주세요. 안 넣어도 앱은 돌아갑니다.
@@ -101,6 +102,12 @@ Vercel에 올리면 서버가 자주 새로 켜지기 때문에, 하루 사용 �
 | `components/ui.tsx` | 공통 화면 조각: 앱바, 사진, AI 기다리는 화면, 알림, 확인 창, 물결 효과 | 8장 |
 | `app/globals.css` | Material 3 색·글자·움직임 (밝은/어두운 화면) | 8장 |
 | `scripts/eval.ts`, `eval/` | AI 평가 도구 (`npm run eval`) | 11장 |
+| `app/plan/page.tsx` | 처음 가는 길: 도착지 검색, 카드 초안 미리 보기 | 처음 가는 길 2주차 |
+| `app/api/plan-route`, `lib/tmap.ts`, `lib/stores.ts`, `lib/planMock.ts` | 걷는 길(TMAP) + 꺾는 곳 근처 가게(상가정보)로 초안 만들기. 키가 없으면 예시 경로 | 2주차 |
+| `components/Roadview.tsx` | 카카오 로드뷰 미리 보기 (보기만 함, 캡처·AI 분석 안 함) | 2주차 |
+| `app/api/check-landmark`, `lib/draftCard.ts`, `lib/sentence.ts` | 걸으면서 '보여요/안 보여요'로 초안 카드 채우기 | 3주차 |
+| `app/ask/[routeId]/page.tsx` | 지나가는 사람에게 보여 줄 큰 글씨 화면 | 4주차 |
+| 걷기 화면의 연습 단계, 퀴즈 | 같은 길 3번 잘 도착하면 안내를 줄일지 물어봄 | 5주차 |
 
 숫자 기준(30m, 50m, 하루 10번 등)은 실제로 걸어 보면서 바꾸면 됩니다. 대부분 `lib/geo.ts`와 `.env.local`에 모여 있습니다.
 
