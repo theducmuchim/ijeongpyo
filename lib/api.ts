@@ -25,6 +25,7 @@ export const requestWhereAmI = (body: {
   cards: { order: number; photoDescription: string; landmarkName: string; instruction: string; lat?: number; lng?: number }[];
   lastCardOrder: number;
   gps?: { lat: number; lng: number } | null;
+  said?: string;
 }) => post<WhereAmIResult & { error?: string }>("/api/where-am-i", body);
 
 export const requestReplace = (body: {

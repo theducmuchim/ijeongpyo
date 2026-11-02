@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AiWaiting, AppBar, CameraInput, Icon, PhotoView } from "@/components/ui";
+import { DictateButton, useScreenSpeech } from "@/components/Voice";
 import { requestCards } from "@/lib/api";
 import { db, getPhoto, newId, savePhoto } from "@/lib/db";
 import { blobToPayload, shrinkPhoto } from "@/lib/image";
@@ -12,20 +13,6 @@ import type { Card, Junction, Route } from "@/types";
 
 const MAX_JUNCTIONS = 20;
 
-// 브라우저 음성 인식(지원하는 브라우저에서만)
-type SpeechRec = {
-  lang: string;
-  interimResults: boolean;
-  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-  start: () => void;
-};
-function makeRecognizer(): SpeechRec | null {
-  const w = window as unknown as { SpeechRecognition?: new () => SpeechRec; webkitSpeechRecognition?: new () => SpeechRec };
-  const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-  return Ctor ? new Ctor() : null;
-}
 
 // 도착 화면에서 '돌아오는 길도 등록하기'를 누르면 이름을 미리 채워 둔다
 let prefillCache: string | null = null;
@@ -54,7 +41,6 @@ export default function RecordPage() {
   const [junctions, setJunctions] = useState<Junction[]>([]);
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [note, setNote] = useState("");
-  const [listening, setListening] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [aiWorking, setAiWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +49,14 @@ export default function RecordPage() {
   const track = useRef<[number, number][]>([]);
   const lastPos = useRef<GeolocationPosition | null>(null);
   const watchId = useRef<number | null>(null);
+
+  useScreenSpeech(
+    aiWorking
+      ? null
+      : started
+        ? "갈림길에 서면 사진을 한 장 찍고, 짧게 메모한 뒤 '여기서 꺾어요'를 눌러 주세요. 메모는 마이크를 눌러 말로 남겨도 돼요."
+        : "보호자나 친구와 같이 걸으면서 길을 등록해요. 길 이름을 적고 '걷기 시작'을 눌러 주세요.",
+  );
 
   useEffect(() => {
     return () => {
@@ -101,17 +95,6 @@ export default function RecordPage() {
     }
   }
 
-  function listen() {
-    const rec = makeRecognizer();
-    if (!rec) return setError("이 브라우저에서는 음성 입력이 안 돼요. 직접 적어 주세요.");
-    rec.lang = "ko-KR";
-    rec.interimResults = false;
-    rec.onresult = (e) => setNote(e.results[0][0].transcript);
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    setListening(true);
-    rec.start();
-  }
 
   function addJunction() {
     if (!pendingPhoto) return;
@@ -291,11 +274,9 @@ export default function RecordPage() {
         )}
 
         <div className="list-row">
-          <button className="icon-btn" onClick={listen} aria-label="음성으로 메모하기" disabled={listening}>
-            <Icon name="mic" />
-          </button>
+          <DictateButton label="음성으로 메모하기" onText={setNote} />
           <div className="text">
-            <p className="label-medium muted">{listening ? "듣는 중…" : "메모 (예: 꽃집에서 왼쪽)"}</p>
+            <p className="label-medium muted">메모 (예: 꽃집에서 왼쪽)</p>
             <input
               className="field"
               value={note}

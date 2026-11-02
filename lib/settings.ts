@@ -14,7 +14,10 @@ export type Settings = {
   seenPhotoNotice: boolean;
   usageLog: boolean;
   theme: Theme; // auto: 휴대폰 설정을 따름
+  listenMode: ListenMode; // 말로 조작: 마이크 버튼을 누를 때만 / 걷는 동안 계속
+  screenSpeech: boolean; // 화면이 바뀌면 지금 할 일을 한 줄 읽어 줌
 };
+export type ListenMode = "push" | "always";
 
 const KEY = "ijeongpyo.settings";
 export const defaultSettings: Settings = {
@@ -27,6 +30,8 @@ export const defaultSettings: Settings = {
   seenPhotoNotice: false,
   usageLog: true,
   theme: "auto",
+  listenMode: "push",
+  screenSpeech: false,
 };
 
 export function loadSettings(): Settings {

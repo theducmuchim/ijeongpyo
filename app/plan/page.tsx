@@ -5,6 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { CornerBlob, LineIcon, TabBar, TONES } from "@/components/brand";
 import { Roadview } from "@/components/Roadview";
 import { AiWaiting, AppBar, CameraInput, Icon, MockBadge } from "@/components/ui";
+import { DictateButton, VoiceControl, useScreenSpeech } from "@/components/Voice";
 import { requestCheck, requestPlaces, requestPlan } from "@/lib/api";
 import { db, newId, savePhoto } from "@/lib/db";
 import { blobToPayload, shrinkPhoto } from "@/lib/image";
@@ -12,6 +13,7 @@ import { josa } from "@/lib/josa";
 import { toast } from "@/lib/toast";
 import { bearingDeg, distanceM } from "@/lib/geo";
 import { logEvent } from "@/lib/usageLog";
+import { type Command, PLAN_QUERY_KEY, speak } from "@/lib/voice";
 import type { Card, CheckResult, Place, PlanCard, PlanResult, Route } from "@/types";
 
 // 로드뷰를 보고 그 자리를 직접 찍어(또는 앨범에서 골라) 올린 사진. 저장할 때 카드에 들어간다.
@@ -36,6 +38,15 @@ function readDest() {
   return destCache ?? null;
 }
 const noSubscribe = () => () => {};
+
+
+const ORDINALS = [
+  ["첫 번째", "첫번째", "1번", "일번"],
+  ["두 번째", "두번째", "2번", "이번 거"],
+  ["세 번째", "세번째", "3번", "삼번"],
+  ["네 번째", "네번째", "4번", "사번"],
+  ["다섯 번째", "다섯번째", "5번", "오번"],
+];
 
 type Gps = { lat: number; lng: number } | null;
 
@@ -110,6 +121,12 @@ export default function PlanPage() {
       () => setGps("denied"),
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
     );
+    // 홈에서 말로 고른 도착지가 있으면 바로 찾는다
+    try {
+      const pq = sessionStorage.getItem(PLAN_QUERY_KEY);
+      sessionStorage.removeItem(PLAN_QUERY_KEY);
+      if (pq) setTimeout(() => search(pq, true), 0);
+    } catch {}
     return () => {
       destCache = undefined; // 다음에 들어올 때는 미리 채운 도착지를 다시 쓰지 않는다
     };
@@ -120,16 +137,23 @@ export default function PlanPage() {
   const here = typeof gps === "object" ? gps : null;
   const target = dest ?? prefill;
 
-  async function search() {
-    if (!q.trim()) return;
+  async function search(query = q, byVoice = false) {
+    const text = query.trim();
+    if (!text) return;
+    setQ(text);
     setBusy("search");
     setError(null);
     try {
-      const r = await requestPlaces(q.trim(), here?.lat, here?.lng);
+      const r = await requestPlaces(text, here?.lat, here?.lng);
       setPlaces(r.places);
       setPlacesMock(!!r.mock);
+      if (byVoice) {
+        const top = r.places.slice(0, 3).map((p, i) => `${i + 1}번, ${p.name.replace(/^\(시험\)\s*/, "")}.`).join(" ");
+        speak(r.places.length ? `${r.places.length}곳을 찾았어요. ${top} 고르려면 '첫 번째'처럼 말해 주세요.` : "찾는 장소가 없어요. 다른 이름으로 말해 주세요.");
+      }
     } catch (e) {
       setError((e as Error).message);
+      if (byVoice) speak((e as Error).message);
     } finally {
       setBusy(null);
     }
@@ -163,6 +187,14 @@ export default function PlanPage() {
         instruction: c.instruction,
       });
       setShots((m) => (m[i]?.url === url ? { ...m, [i]: { url, blob, result } } : m));
+      const name = c.landmark.name;
+      speak(
+        result.seen && name
+          ? `${c.order}번 사진에 ${josa(name, "이/가")} 보여요.`
+          : name
+            ? `${c.order}번 사진에서 ${josa(name, "을/를")} 못 찾았어요. 대신 ${josa(result.landmark.name, "을/를")} 길잡이로 써요.`
+            : `${c.order}번은 ${josa(result.landmark.name, "을/를")} 길잡이로 써요.`,
+      );
     } catch (e) {
       // AI를 못 불러도 사진은 넣어 둔다. 카드 문장은 지도 데이터로 만든 그대로.
       setShots((m) => (m[i]?.url === url ? { ...m, [i]: { url, blob } } : m));
@@ -240,6 +272,26 @@ export default function PlanPage() {
     if (Object.keys(shots).length) toast(`사진 ${Object.keys(shots).length}장을 넣어 저장했어요`);
     router.push(`/walk/${id}`);
   }
+
+  const planCommands: Command[] = [
+    { id: "go", say: ["이 길로", "출발", "가자", "갈게"] },
+    { id: "read", say: ["읽어", "카드", "알려 줘", "알려줘"] },
+    { id: "back", say: ["다시 고르", "다른 곳"] },
+  ];
+  function onPlanVoice(id: string) {
+    if (!plan) return;
+    if (id === "go") save();
+    else if (id === "back") setPlan(null);
+    else if (id === "read") plan.cards.forEach((c, i) => speak(`${c.order}번. ${c.instruction}`, { queue: i > 0, force: true }));
+  }
+  useScreenSpeech(
+    busy === "plan"
+      ? null
+      : plan && target
+        ? `카드 ${plan.cards.length}장을 만들었어요. 걸어서 약 ${Math.max(1, Math.round(plan.totalTime / 60))}분이에요. 출발하려면 '이 길로 가기'를 눌러 주세요.`
+        : "도착지 이름을 적거나 말해 주세요. 출발지는 지금 위치예요.",
+  );
+  const searchCommands: Command[] = ORDINALS.map((say, i) => ({ id: String(i), say, when: !!places && i < places.length }));
 
   if (busy === "plan") {
     return (
@@ -323,6 +375,7 @@ export default function PlanPage() {
             길 이름
           </label>
           <input id="plan-name" className="field" value={name} onChange={(e) => setName(e.target.value)} />
+          <VoiceControl commands={planCommands} onCommand={onPlanVoice} examples="'카드 읽어 줘', '출발', '다시 고르기'" />
         </div>
         <nav className="demo-nav">
           <button className="btn btn-outlined" onClick={() => setPlan(null)}>
@@ -357,10 +410,20 @@ export default function PlanPage() {
           }}
         >
           <input className="field body-large" style={{ flex: 3 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="도착지 이름 (예: 서대전역)" aria-label="도착지 검색" />
+          <DictateButton label="도착지를 말로 찾기" onText={(t) => search(t, true)} />
           <button className="btn btn-filled" style={{ flex: 1, padding: 0 }} disabled={busy === "search" || !q.trim()}>
             검색
           </button>
         </form>
+        {places && places.length > 0 && (
+          <VoiceControl
+            commands={searchCommands}
+            onCommand={(id) => places[Number(id)] && makePlan(places[Number(id)])}
+            onOther={(t) => search(t, true)}
+            examples="'첫 번째', 또는 다른 도착지 이름"
+            label="말로 고르기"
+          />
+        )}
         <MockBadge show={placesMock} />
         {error && <p className="banner body-medium">{error}</p>}
         {busy === "search" && <div className="linear" />}

@@ -7,7 +7,8 @@ import { AppBar, Icon, useConfirm } from "@/components/ui";
 import { makeBackup, restoreBackup } from "@/lib/backup";
 import { db } from "@/lib/db";
 import { saveJson } from "@/lib/download";
-import { saveSettings, useSettings, type Settings, type Theme } from "@/lib/settings";
+import { saveSettings, useSettings, type ListenMode, type Settings, type Theme } from "@/lib/settings";
+import { canListen, speak } from "@/lib/voice";
 import { toast } from "@/lib/toast";
 import { clearEvents, exportPayload, loadEvents, summarize, type UsageSummary } from "@/lib/usageLog";
 import { josa } from "@/lib/josa";
@@ -220,6 +221,11 @@ const THEMES: { value: Theme; label: string; icon: "phone" | "light" | "dark" }[
   { value: "dark", label: "어둡게", icon: "dark" },
 ];
 
+const LISTEN: { value: ListenMode; label: string }[] = [
+  { value: "push", label: "버튼 누를 때만" },
+  { value: "always", label: "걷는 동안 계속 듣기" },
+];
+
 export default function SettingsPage() {
   const s = useSettings();
   if (!s) return <main className="screen" />;
@@ -237,9 +243,38 @@ export default function SettingsPage() {
         <Row title="진동 안내" desc="다음 카드가 뜨면 진동해요">
           <Switch label="진동 안내" checked={s.vibrate} onChange={(v) => set({ vibrate: v })} />
         </Row>
-        <Row title="음성 안내" desc="카드 문장을 읽어 줘요">
+        <Row title="음성 안내" desc="카드 문장, 다음 갈림길까지 거리, 곧 갈림길, 길 벗어남을 소리로 알려 줘요">
           <Switch label="음성 안내" checked={s.voice} onChange={(v) => set({ voice: v })} />
         </Row>
+        <Row title="화면마다 할 일 읽기" desc="화면이 바뀌면 지금 할 일을 한 줄 읽어 줘요">
+          <Switch label="화면마다 할 일 읽기" checked={s.screenSpeech} onChange={(v) => set({ screenSpeech: v })} />
+        </Row>
+        <div style={{ padding: "0 16px 8px" }}>
+          <button className="btn btn-text label-large" style={{ padding: 0 }} onClick={() => speak("꽃집에서 왼쪽으로 가세요. 다음 갈림길까지 약 150미터예요.", { force: true })}>
+            <Icon name="volume" size={18} /> 목소리 들어 보기
+          </button>
+        </div>
+
+        <p className="section-label label-large">말로 조작</p>
+        {canListen() ? (
+          <>
+            <Row title="듣는 방식" desc="'계속 듣기'는 걷기와 길 찾기 화면에서만 켜져요. 배터리가 더 빨리 줄 수 있어요." />
+            <div className="seg" role="group" aria-label="듣는 방식">
+              {LISTEN.map((t) => (
+                <button key={t.value} aria-pressed={s.listenMode === t.value} onClick={() => set({ listenMode: t.value })}>
+                  {s.listenMode === t.value && <Icon name="check" size={18} />} {t.label}
+                </button>
+              ))}
+            </div>
+            <p className="label-medium muted" style={{ padding: "8px 16px 12px" }}>
+              말한 소리는 글자로 바꾸려고 브라우저의 음성 인식(크롬은 구글, 사파리는 애플)으로 보내져요. 이정표는 소리를 저장하지 않아요.
+            </p>
+          </>
+        ) : (
+          <p className="body-medium muted" style={{ padding: "0 16px 12px" }}>
+            이 브라우저에서는 음성 인식이 안 돼요. 안드로이드 크롬이나 아이폰 사파리에서 열어 주세요.
+          </p>
+        )}
 
         <p className="section-label label-large">보호자</p>
         <Row title="보호자에게 위치 보내기" desc="'길을 잃었어요' 화면에 버튼이 생겨요. 저절로 보내지는 않아요.">

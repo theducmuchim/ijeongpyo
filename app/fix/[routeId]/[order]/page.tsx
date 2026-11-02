@@ -10,6 +10,8 @@ import { setResume } from "@/lib/resume";
 import { toast } from "@/lib/toast";
 import { logEvent } from "@/lib/usageLog";
 import { josa } from "@/lib/josa";
+import { useScreenSpeech } from "@/components/Voice";
+import { speak } from "@/lib/voice";
 import type { ReplaceResult, Route } from "@/types";
 
 // 2차 기능: 길잡이가 없어졌거나 바뀌었을 때, 같은 자리에서 다시 찍어 카드 한 장을 고친다.
@@ -35,6 +37,8 @@ export default function FixLandmarkPage() {
   const index = route ? route.cards.findIndex((c) => c.order === Number(order)) : -1;
   const card = route && index >= 0 ? route.cards[index] : null;
 
+  useScreenSpeech(card ? `${josa(card.landmark.name, "이/가")} 안 보이면 이 자리를 다시 찍어 주세요. AI가 새 길잡이를 골라요.` : null);
+
   const backToWalk = () => {
     setResume(routeId, Number(order));
     router.push(`/walk/${routeId}`);
@@ -51,9 +55,11 @@ export default function FixLandmarkPage() {
       const r = await suggestReplacement(route, index, small);
       setResult(r);
       setText(r.instruction);
+      speak(`${r.changeNote ? `${r.changeNote}. ` : ""}새 문장은 '${r.instruction}'예요. 맞으면 '이걸로 바꾸기'를 눌러 주세요.`);
     } catch (e) {
       // AI가 안 돼도 사진은 바꿀 수 있게 한다. 문장은 직접 고친다.
       setFailed((e as Error).message);
+      speak("AI 답을 받지 못했어요. 사진만 바꾸고, 문장은 직접 고쳐 주세요.");
       setText(card.instruction);
     } finally {
       setWorking(false);

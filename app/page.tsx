@@ -1,10 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CornerBlob, HeroArt, LineIcon, TabBar, TONES } from "@/components/brand";
+import { VoiceControl, useScreenSpeech } from "@/components/Voice";
 import { db } from "@/lib/db";
+import { josa } from "@/lib/josa";
+import { type Command, PLAN_QUERY_KEY, destFrom, speak, squash } from "@/lib/voice";
 import type { Route } from "@/types";
+
+const HOME_COMMANDS: Command[] = [
+  { id: "/record", say: ["새 길", "길 등록", "등록"] },
+  { id: "/plan", say: ["처음 가는 길", "처음 가는"] },
+  { id: "/settings", say: ["설정"] },
+  { id: "/guide", say: ["설명서", "도움말", "쓰는 법"] },
+  { id: "/demo", say: ["체험"] },
+  { id: "/intro", say: ["소개"] },
+];
 
 // 홈: Figma "Schedule Management Platform (2019)"의 Homescreen 구성을 따른다.
 // 초록 머리 그림 → 흰 시트 → "내 길" 가로 카드 → "길 만들기" 큰 카드 → 아래 탭.
@@ -26,11 +39,40 @@ function subtitle(r: Route) {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [routes, setRoutes] = useState<Route[] | null>(null);
 
   useEffect(() => {
     db.routes.orderBy("createdAt").reverse().toArray().then(setRoutes);
   }, []);
+
+  useScreenSpeech(
+    routes === null
+      ? null
+      : routes.length
+        ? `저장한 길이 ${routes.length}개 있어요. 걸을 길을 고르거나, 마이크를 누르고 길 이름이나 가려는 곳을 말해 주세요.`
+        : "아직 저장한 길이 없어요. '새 길 등록'이나 '처음 가는 길'에서 길을 만들어요.",
+  );
+
+  // 말한 내용이 저장한 길 이름이면 그 길을 걷고, 아니면 처음 가는 길에서 도착지로 찾는다
+  function onOther(text: string) {
+    const t = squash(text);
+    const hit = routes?.find((r) => {
+      const n = squash(r.name);
+      const d = squash(r.destName ?? "");
+      return (n.length >= 2 && (t.includes(n) || n.includes(t))) || (d.length >= 2 && t.includes(d));
+    });
+    if (hit) {
+      speak(`${josa(hit.name, "을/를")} 걸어요.`);
+      return router.push(hit.status === "ready" ? `/walk/${hit.id}` : `/review/${hit.id}`);
+    }
+    const dest = destFrom(text);
+    if (dest.length < 2) return speak("알아듣지 못했어요. 저장한 길 이름이나 가려는 곳을 말해 주세요.", { force: true });
+    try {
+      sessionStorage.setItem(PLAN_QUERY_KEY, dest);
+    } catch {}
+    router.push("/plan");
+  }
 
   return (
     <main className="screen home">
@@ -48,6 +90,15 @@ export default function Home() {
       </header>
 
       <div className="sheet">
+        <section className="sheet-sec" style={{ paddingBottom: 0 }}>
+          <VoiceControl
+            commands={HOME_COMMANDS}
+            onCommand={(path) => router.push(path)}
+            onOther={onOther}
+            label="말로 길 고르기"
+            examples="'등굣길', '서대전역 가는 길', '새 길 등록'"
+          />
+        </section>
         <section className="sheet-sec">
           <h2 className="sec-title">내 길</h2>
           <p className="sec-sub">{routes === null ? "불러오는 중…" : routes.length > 0 ? `저장한 길 ${routes.length}개` : "아직 저장한 길이 없어요"}</p>

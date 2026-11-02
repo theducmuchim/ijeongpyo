@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AiWaiting, AppBar, CameraInput, Icon, IconLink, PhotoView } from "@/components/ui";
+import { VoiceControl } from "@/components/Voice";
 import { requestCheck } from "@/lib/api";
 import { db } from "@/lib/db";
 import { applyCheck, isDraft, nextCandidate, replaceCard } from "@/lib/draftCard";
@@ -21,7 +22,8 @@ import { clearLost, setResume, takeResume, wasLost } from "@/lib/resume";
 import { lastCardKey, loadSettings } from "@/lib/settings";
 import { toast } from "@/lib/toast";
 import { logEvent } from "@/lib/usageLog";
-import type { CheckResult, PracticeLevel, Route } from "@/types";
+import { type Command, speak, spokenDistance, stopSpeaking } from "@/lib/voice";
+import type { Card, CheckResult, PracticeLevel, Route } from "@/types";
 
 const RETURN_SUFFIX = " 돌아오는 길";
 const APPROACH_M = 50; // 처음 가는 길: 갈림길 50m 전에 길잡이를 확인하라고 알린다
@@ -33,12 +35,13 @@ const LEVEL_TEXT: Record<PracticeLevel, string> = {
   3: "꺾는 곳에서만 알림",
 };
 
-function speak(text: string) {
-  if (!loadSettings().voice || !("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "ko-KR";
-  window.speechSynthesis.speak(u);
+const NEAR_M = 70; // 내비처럼: 다음 갈림길 70m 안에 들면 "곧 갈림길이에요"를 한 번 알린다
+
+// 다음 갈림길이 가까워졌을 때 미리 들려줄 말
+function nearText(c: Card): string {
+  if (c.action === "arrive") return `곧 도착해요. ${c.instruction}`;
+  if (isDraft(c) && c.landmark.name) return `곧 갈림길이에요. ${josa(c.landmark.name, "이/가")} 보이나요?`;
+  return `곧 갈림길이에요. ${c.instruction}`;
 }
 
 const buzz = (p: number | number[]) => loadSettings().vibrate && "vibrate" in navigator && navigator.vibrate(p);
@@ -210,6 +213,7 @@ function DraftPanel({ route, index, onChange }: { route: Route; index: number; o
   const name = card.landmark.name;
   const cand = card.candidates?.[0];
   const inputId = `check-${card.id}`;
+  const seenBtn = useRef<HTMLLabelElement>(null);
 
   async function onPhoto(file: File) {
     const small = await shrinkPhoto(file);
@@ -227,11 +231,14 @@ function DraftPanel({ route, index, onChange }: { route: Route; index: number; o
         onChange(await applyCheck(route, index, small, r));
         logEvent(route.id, "landmark_seen");
         toast(`${card.order}번 카드에 사진을 넣었어요`);
+        speak(name ? `사진에 ${josa(name, "이/가")} 보여요. ${r.instruction}` : `${card.order}번 카드에 사진을 넣었어요. ${r.instruction}`);
       } else {
         setMiss({ blob: small, result: r });
+        speak(`사진에서 ${josa(name, "을/를")} 찾지 못했어요. 대신 ${josa(r.landmark.name, "이/가")} 보여요. 이걸 길잡이로 쓰려면 '이걸로 바꾸기'를 눌러 주세요.`);
       }
     } catch (e) {
       toast((e as Error).message);
+      speak((e as Error).message);
     } finally {
       setBusy(null);
     }
@@ -243,6 +250,31 @@ function DraftPanel({ route, index, onChange }: { route: Route; index: number; o
     onChange(await replaceCard(route, index, next));
     speak(next.instruction);
   }
+
+  async function acceptMiss() {
+    if (!miss) return;
+    onChange(await applyCheck(route, index, miss.blob, miss.result));
+    setMiss(null);
+    toast(`${card.order}번 카드를 바꿨어요`);
+    speak(miss.result.instruction);
+  }
+
+  // 걷기 화면에서 말로 "보여요", "안 보여요", "이걸로"라고 했을 때
+  useEffect(() => {
+    const on = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (id === "missing" && name && !miss) notSeen();
+      else if (id === "accept" && miss) acceptMiss();
+      else if (id === "seen") {
+        // 카메라는 손으로 눌러야 열리는 휴대폰이 많아서, 누를 버튼을 알려 준다
+        speak("화면의 '보여요'를 눌러 사진을 한 장 찍어 주세요.", { force: true });
+        seenBtn.current?.classList.add("attention");
+        setTimeout(() => seenBtn.current?.classList.remove("attention"), 3000);
+      }
+    };
+    window.addEventListener("ijp:draft", on);
+    return () => window.removeEventListener("ijp:draft", on);
+  });
 
   if (busy) {
     return <AiWaiting title="길잡이 확인하는 중" hint="5~15초 걸려요" photoUrl={busy} stepMs={1200} steps={["사진 보내는 중", "간판 찾는 중", "카드와 맞춰 보는 중"]} />;
@@ -257,14 +289,7 @@ function DraftPanel({ route, index, onChange }: { route: Route; index: number; o
           <p className="body-medium muted">
             대신 보이는 것: {miss.result.landmark.name}. 이걸 길잡이로 쓰면 &ldquo;{miss.result.instruction}&rdquo;가 돼요.
           </p>
-          <button
-            className="btn btn-filled"
-            onClick={async () => {
-              onChange(await applyCheck(route, index, miss.blob, miss.result));
-              setMiss(null);
-              toast(`${card.order}번 카드를 바꿨어요`);
-            }}
-          >
+          <button className="btn btn-filled" onClick={acceptMiss}>
             이걸로 바꾸기
           </button>
           <label htmlFor={inputId} className="btn btn-outlined">
@@ -285,7 +310,7 @@ function DraftPanel({ route, index, onChange }: { route: Route; index: number; o
             <button className="btn btn-outlined" onClick={notSeen}>
               안 보여요
             </button>
-            <label htmlFor={inputId} className="btn btn-filled">
+            <label htmlFor={inputId} className="btn btn-filled" ref={seenBtn}>
               <Icon name="camera" size={18} /> 보여요
             </label>
           </div>
@@ -354,6 +379,12 @@ export default function WalkPage() {
   const logged = useRef({ start: false, off: false });
   const offCount = useRef(0);
   const alerted = useRef(new Set<number>());
+  const farSaid = useRef(new Set<number>()); // "다음 갈림길까지 약 ○미터예요"를 말한 카드
+  const nearSaid = useRef(new Set<number>()); // "곧 갈림길이에요"를 말한 카드
+  const here = useRef<{ lat: number; lng: number } | null>(null); // 마지막으로 잘 잡힌 위치
+  const saidManual = useRef(false);
+  const quiet = useRef(false); // 연습 3단계: 꺾는 곳에서만 알린다
+  const router = useRouter();
   const [startedAt] = useState(() => Date.now());
 
   useWakeLock(!!route && !arrived);
@@ -388,9 +419,27 @@ export default function WalkPage() {
     } catch {}
     buzz(200);
     speak(card.instruction);
+    // 위치가 잡혀 있으면 바로 이어서 다음 갈림길까지 거리를 알린다 (카드를 손이나 말로 넘겼을 때도)
+    const next = route?.cards[index + 1];
+    const d = distToCard(next);
+    if (next && d !== null && d > NEAR_M && !quiet.current && !farSaid.current.has(next.order)) {
+      farSaid.current.add(next.order);
+      speak(`다음 갈림길까지 약 ${spokenDistance(d)}예요.`, { queue: true });
+    }
     // 카드가 바뀌는 순간에만 실행하고 싶어서 card.order로 묶는다 (같은 카드의 문장이 바뀔 때는 DraftPanel이 읽는다)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card?.order, index, routeId]);
+
+  // 연습 3단계(꺾는 곳에서만 알림)에서는 "다음 갈림길까지 ○미터"를 말하지 않는다
+  useEffect(() => {
+    quiet.current = (route?.practiceLevel ?? 1) === 3 && !fullView;
+  }, [route, fullView]);
+
+  // 지금 위치에서 그 카드 지점까지 거리. 위치가 안 잡혔으면 null
+  function distToCard(c?: Card): number | null {
+    if (!c || c.lat === undefined || c.lng === undefined || !here.current) return null;
+    return distanceM(here.current.lat, here.current.lng, c.lat, c.lng);
+  }
 
   const go = useCallback(
     (d: number) => {
@@ -428,13 +477,33 @@ export default function WalkPage() {
         const { latitude: lat, longitude: lng, accuracy } = pos.coords;
         if (accuracy > BAD_ACCURACY_M) {
           setAutoMode("manual"); // 건물 사이 등 GPS가 나쁠 때는 버튼으로 넘긴다
+          here.current = null;
+          if (!saidManual.current) {
+            saidManual.current = true;
+            speak("위치가 잘 안 잡혀요. 카드를 직접 넘기거나 '다음'이라고 말해 주세요.", { queue: true });
+          }
           return;
         }
         setAutoMode("auto");
+        here.current = { lat, lng };
         const now = route.cards[indexRef.current];
         const next = route.cards[indexRef.current + 1];
         if (next?.lat !== undefined && next.lng !== undefined) {
-          if (distanceM(lat, lng, next.lat, next.lng) <= NEXT_CARD_RADIUS_M) go(1);
+          // 내비처럼: 카드가 뜬 뒤 남은 거리 → 70m 안에서 "곧 갈림길" → 30m 안에서 다음 카드(문장을 읽음)
+          const d = distanceM(lat, lng, next.lat, next.lng);
+          if (d <= NEXT_CARD_RADIUS_M) go(1);
+          else if (d <= NEAR_M) {
+            if (!nearSaid.current.has(next.order)) {
+              nearSaid.current.add(next.order);
+              farSaid.current.add(next.order);
+              if (isDraft(next)) alerted.current.add(next.order);
+              buzz([60, 60, 60]);
+              speak(nearText(next), { queue: true });
+            }
+          } else if (!farSaid.current.has(next.order) && !quiet.current) {
+            farSaid.current.add(next.order);
+            speak(`다음 갈림길까지 약 ${spokenDistance(d)}예요.`, { queue: true });
+          }
         }
         // 처음 가는 길: 사진 없는 카드의 갈림길 50m 전에 한 번 알린다
         if (now && isDraft(now) && now.lat !== undefined && now.lng !== undefined && !alerted.current.has(now.order)) {
@@ -442,7 +511,7 @@ export default function WalkPage() {
             alerted.current.add(now.order);
             setApproach(true);
             buzz([80, 80, 80]);
-            if (now.landmark.name) speak(`곧 갈림길이에요. ${josa(now.landmark.name, "이/가")} 보이나요?`);
+            if (now.landmark.name) speak(`곧 갈림길이에요. ${josa(now.landmark.name, "이/가")} 보이나요?`, { queue: true });
           }
         }
         if (route.track && route.track.length > 5) {
@@ -456,6 +525,8 @@ export default function WalkPage() {
                 logged.current.off = true; // 벗어난 한 번을 한 번으로 센다
                 offCount.current += 1;
                 logEvent(route.id, "off_route");
+                buzz([300, 100, 300]);
+                speak("길에서 조금 멀어졌어요. 길이 헷갈리면 '길을 잃었어요'라고 말하거나 아래 버튼을 눌러 주세요.");
               }
             }
           } else {
@@ -504,6 +575,49 @@ export default function WalkPage() {
   let level: PracticeLevel = fullView ? 1 : (route.practiceLevel ?? 1);
   if (level === 3 && autoMode !== "auto") level = 2;
   const minimal = level === 3 && !showPhoto && !draft;
+  const commands: Command[] = [
+    { id: "next", say: ["다음", "넘겨", "다음 카드"], when: !isLast },
+    { id: "prev", say: ["이전", "뒤로", "전 카드", "앞 카드"], when: index > 0 },
+    { id: "repeat", say: ["다시", "뭐라고", "한 번 더", "안내해"] },
+    { id: "where", say: ["얼마나", "남았", "몇 미터", "거리", "몇 번째"] },
+    { id: "seen", say: ["보여", "보입니다", "찾았어"], when: draft },
+    { id: "missing", say: ["안 보여", "안보여", "못 찾겠", "없어"] },
+    { id: "accept", say: ["이걸로", "바꿔"], when: draft },
+    { id: "lost", say: ["길을 잃었", "길 잃었", "여기가 어디", "어디야", "모르겠"] },
+    { id: "photo", say: ["사진"], when: !draft },
+    { id: "arrive", say: ["도착"], when: isLast },
+    { id: "ask", say: ["물어볼", "도와줘", "도움"] },
+    { id: "stop", say: ["그만", "조용", "멈춰"] },
+    { id: "home", say: ["홈으로", "처음 화면"] },
+  ];
+
+  function onVoice(id: string) {
+    if (!route || !card) return;
+    if (id === "next") {
+      logEvent(route.id, "manual_next");
+      go(1);
+    } else if (id === "prev") go(-1);
+    else if (id === "repeat") speak(card.instruction, { force: true });
+    else if (id === "where") {
+      const left = route.cards.length - index - 1;
+      const d = autoMode === "auto" ? distToCard(route.cards[index + 1]) : null;
+      speak(
+        `${route.cards.length}장 중 ${index + 1}번째 카드예요. ` +
+          (left ? `${left}장 남았어요.` : "마지막 카드예요.") +
+          (left && d !== null ? ` 다음 갈림길까지 약 ${spokenDistance(d)}예요.` : ""),
+        { force: true },
+      );
+    } else if (id === "seen" || id === "accept" || (id === "missing" && draft)) {
+      window.dispatchEvent(new CustomEvent("ijp:draft", { detail: id }));
+    } else if (id === "missing") router.push(`/fix/${route.id}/${card.order}`);
+    else if (id === "lost" || id === "ask") {
+      setResume(route.id, card.order);
+      router.push(`/${id}/${route.id}`);
+    } else if (id === "photo") setShowPhoto(true);
+    else if (id === "arrive") arrive();
+    else if (id === "stop") stopSpeaking();
+    else if (id === "home") router.push("/");
+  }
 
   return (
     <main className="screen">
@@ -585,6 +699,12 @@ export default function WalkPage() {
             </button>
           )}
         </div>
+        <VoiceControl
+          commands={commands}
+          onCommand={onVoice}
+          allowAlways
+          examples={draft ? "'보여요', '안 보여요', '다시'" : "'다음', '다시', '얼마나 남았어', '길을 잃었어요'"}
+        />
         <div className="grow" />
         <Link
           href={`/lost/${route.id}`}

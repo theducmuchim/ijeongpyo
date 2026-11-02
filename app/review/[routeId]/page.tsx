@@ -3,11 +3,14 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppBar, CameraInput, Icon, PhotoView, SkeletonList, useConfirm } from "@/components/ui";
+import { DictateButton, VoiceControl, useScreenSpeech } from "@/components/Voice";
 import { db, deleteRoute, savePhoto } from "@/lib/db";
 import { shrinkPhoto } from "@/lib/image";
 import { applyReplacement, suggestReplacement } from "@/lib/replaceCard";
 import { toast } from "@/lib/toast";
 import { josa } from "@/lib/josa";
+import { tidySpoken } from "@/lib/tone";
+import { speak } from "@/lib/voice";
 import type { Route } from "@/types";
 
 const ACTION_LABEL = { straight: "곧장", left: "왼쪽으로", right: "오른쪽으로", arrive: "도착" } as const;
@@ -22,6 +25,8 @@ export default function ReviewPage() {
   useEffect(() => {
     db.routes.get(routeId).then((r) => setRoute(r ?? null));
   }, [routeId]);
+
+  useScreenSpeech(route ? `카드 ${route.cards.length}장이에요. 문장이 어색하면 눌러서 고치거나, 마이크를 눌러 말로 고쳐 주세요.` : null);
 
   if (route === undefined) {
     return (
@@ -130,14 +135,25 @@ export default function ReviewPage() {
                       <div className="linear" />
                     </>
                   ) : (
-                    <textarea
-                      className="field body-large"
-                      value={c.instruction}
-                      onChange={(e) => update(i, { instruction: e.target.value })}
-                      readOnly={fixing !== null}
-                      aria-label={`${c.order}번 카드 안내 문장`}
-                      rows={2}
-                    />
+                    <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+                      <textarea
+                        className="field body-large"
+                        style={{ flex: 1 }}
+                        value={c.instruction}
+                        onChange={(e) => update(i, { instruction: e.target.value })}
+                        readOnly={fixing !== null}
+                        aria-label={`${c.order}번 카드 안내 문장`}
+                        rows={2}
+                      />
+                      <DictateButton
+                        label={`${c.order}번 문장을 말로 고치기`}
+                        onText={(t) => {
+                          const sentence = tidySpoken(t);
+                          update(i, { instruction: sentence });
+                          speak(`${c.order}번 문장을 바꿨어요. ${sentence}`, { force: true });
+                        }}
+                      />
+                    </div>
                   )}
                   {c.userNote && <p className="label-medium muted">메모: “{c.userNote}”</p>}
                 </div>
@@ -145,6 +161,17 @@ export default function ReviewPage() {
             </div>
           ))}
         </div>
+        <VoiceControl
+          commands={[
+            { id: "read", say: ["읽어", "들려"] },
+            { id: "save", say: ["저장"] },
+          ]}
+          onCommand={(id) => {
+            if (id === "save") save();
+            else route.cards.forEach((c, i) => speak(`${c.order}번. ${c.instruction}`, { queue: i > 0, force: true }));
+          }}
+          examples="'카드 읽어 줘', '저장해 줘'"
+        />
         <div className="grow" />
         <button className="btn btn-filled btn-large" onClick={save} disabled={fixing !== null}>
           <Icon name="check" size={28} /> 저장하기

@@ -14,6 +14,7 @@ const SECTIONS = [
   { id: "lost", title: "길을 잃었을 때" },
   { id: "newroute", title: "처음 가는 길" },
   { id: "practice", title: "연습 모드" },
+  { id: "voice", title: "말로 쓰기와 음성 안내" },
   { id: "guardian", title: "보호자가 알아 둘 것" },
   { id: "backup", title: "백업과 휴대폰 바꾸기" },
   { id: "privacy", title: "사진과 개인정보" },
@@ -222,7 +223,31 @@ export default function GuidePage() {
           </p>
         </Sec>
 
-        <Sec n={10} id="guardian" title="보호자가 알아 둘 것">
+        <Sec n={10} id="voice" title="말로 쓰기와 음성 안내">
+          <p>화면을 보지 않고도 걸을 수 있게, 내비게이션처럼 소리로 알려 주고 말로 조작할 수 있어요.</p>
+          <p className="title-medium">들려주는 것</p>
+          <ul>
+            <li>카드가 넘어가면 안내 문장을 읽어요.</li>
+            <li>카드가 뜬 뒤 &ldquo;다음 갈림길까지 약 150미터예요&rdquo;처럼 남은 거리를 알려 줘요.</li>
+            <li>다음 갈림길 70m 안에 들면 &ldquo;곧 갈림길이에요&rdquo;와 할 일을 한 번 더 알려 줘요.</li>
+            <li>길에서 멀어지면 소리와 진동으로 알려 줘요. 길을 잃었을 때 찾은 결과도 읽어 줘요.</li>
+            <li>설정에서 &lsquo;화면마다 할 일 읽기&rsquo;를 켜면 화면이 바뀔 때마다 할 일을 한 줄 읽어 줘요.</li>
+          </ul>
+          <p className="title-medium">말로 할 수 있는 것</p>
+          <ul>
+            <li>걷기: &ldquo;다음&rdquo;, &ldquo;이전&rdquo;, &ldquo;다시&rdquo;, &ldquo;얼마나 남았어&rdquo;, &ldquo;보여요&rdquo;, &ldquo;안 보여요&rdquo;, &ldquo;사진&rdquo;, &ldquo;길을 잃었어요&rdquo;, &ldquo;도와줘&rdquo;, &ldquo;그만&rdquo;</li>
+            <li>홈: 저장한 길 이름(&ldquo;등굣길&rdquo;)을 말하면 바로 걷고, &ldquo;서대전역 가는 길&rdquo;처럼 말하면 처음 가는 길로 찾아요.</li>
+            <li>처음 가는 길: 도착지를 말로 찾고, &ldquo;첫 번째&rdquo;로 고르고, &ldquo;카드 읽어 줘&rdquo;, &ldquo;출발&rdquo;</li>
+            <li>길을 잃었을 때: &ldquo;편의점 앞이에요&rdquo;처럼 보이는 것을 말하면 사진과 같이 AI에 보내요. &ldquo;다시 걷기&rdquo;, &ldquo;물어보기&rdquo;도 돼요.</li>
+            <li>카드 확인: 문장 옆 마이크를 누르고 말하면 그 문장으로 바뀌어요.</li>
+          </ul>
+          <p>
+            기본은 &lsquo;말로 하기&rsquo; 버튼을 누를 때만 들어요. 설정에서 &lsquo;걷는 동안 계속 듣기&rsquo;를 고르면 걷기와 길 찾기 화면에서 버튼 없이 들어요.
+            길거리 소리를 잘못 알아들을 수 있고 배터리가 더 빨리 줄어요. 카메라는 휴대폰이 손으로 눌러야만 열어 줘서, &ldquo;보여요&rdquo;라고 말하면 누를 버튼을 알려 줘요.
+          </p>
+        </Sec>
+
+        <Sec n={11} id="guardian" title="보호자가 알아 둘 것">
           <ul>
             <li>처음 몇 번은 뒤에서 조금 떨어져 같이 걸어 주세요. 카드가 어디서 넘어가는지 함께 확인하면 좋아요.</li>
             <li>짧고 자주 다니는 길부터 등록해 주세요. 익숙해지면 길을 늘려요.</li>
@@ -232,7 +257,7 @@ export default function GuidePage() {
           </ul>
         </Sec>
 
-        <Sec n={11} id="backup" title="백업과 휴대폰 바꾸기">
+        <Sec n={12} id="backup" title="백업과 휴대폰 바꾸기">
           <p>
             길과 사진은 서버가 아니라 이 휴대폰 안에만 저장돼요. 휴대폰을 바꾸거나 브라우저 기록을 지우면 사라지니, 설정 → 백업에서
             &lsquo;백업하기&rsquo;로 파일을 만들어 두세요. 새 휴대폰에서는 &lsquo;불러오기&rsquo;로 그 파일을 고르면 돼요.
@@ -240,16 +265,17 @@ export default function GuidePage() {
           <p>백업 파일에는 사진과 다닌 길이 들어 있어요. 다른 사람에게 보내지 마세요.</p>
         </Sec>
 
-        <Sec n={12} id="privacy" title="사진과 개인정보">
+        <Sec n={13} id="privacy" title="사진과 개인정보">
           <ul>
             <li>길을 등록할 때, 길을 잃었을 때, 길잡이를 바꿀 때 사진을 구글 Gemini로 보내요.</li>
             <li>무료 서비스라서 구글이 보낸 사진을 서비스 개선에 쓸 수 있어요. 그래서 얼굴, 집 주소, 문패가 찍히지 않게 해 주세요.</li>
             <li>보내기 전에 사진 크기를 줄이고, 사진 속 촬영 위치 정보는 지워요.</li>
+            <li>말로 조작할 때 말소리는 글자로 바꾸려고 브라우저의 음성 인식(크롬은 구글, 사파리는 애플)으로 보내져요. 이정표는 소리를 저장하지 않아요.</li>
             <li>사진, 카드, 걸은 길, 보호자 번호는 이 휴대폰에만 저장돼요. 이정표 서버는 아무것도 저장하지 않아요.</li>
           </ul>
         </Sec>
 
-        <Sec n={13} id="faq" title="자주 묻는 질문">
+        <Sec n={14} id="faq" title="자주 묻는 질문">
           <div className="faq">
             {FAQ.map(([q, a]) => (
               <details key={q}>

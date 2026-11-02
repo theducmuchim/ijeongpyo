@@ -69,3 +69,8 @@ function fixEnding(sentence: string): string {
   if (m) t = t.replace(/입니다\.?$/, hasFinal(m[1]) ? "이에요" : "예요");
   return t;
 }
+
+// 말로 받은 안내 문장(카드 고치기)을 카드 문장 모양으로: 말투를 고치고 끝의 마침표를 뺀다
+export function tidySpoken(s: string): string {
+  return tidy(s).replace(/[.。]+$/, "").trim();
+}

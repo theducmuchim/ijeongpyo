@@ -7,7 +7,7 @@ import type { ImagePayload, WhereAmIResult } from "@/types";
 
 export const maxDuration = 60;
 
-type Body = { photos: ImagePayload[]; cards: CardText[]; lastCardOrder: number; gps?: { lat: number; lng: number } | null };
+type Body = { photos: ImagePayload[]; cards: CardText[]; lastCardOrder: number; gps?: { lat: number; lng: number } | null; said?: string };
 
 export async function POST(req: Request) {
   const deviceId = req.headers.get("x-device-id");
@@ -63,6 +63,9 @@ export async function POST(req: Request) {
         }
       }
     }
+    // 사용자가 말로 한 설명 ("편의점 앞인데 어디로 가요?"). 사진보다 앞세우지 않는다.
+    const said = typeof body.said === "string" ? body.said.trim().slice(0, 200) : "";
+    if (said) lines.push(`사용자가 말로 한 설명(참고만 하고, 사진과 다르면 사진을 따른다): "${said}"`);
     const result = await askWhereAmI(photos, cards, last, lines.join("\n"));
     delete result.fallback;
     return Response.json(result);

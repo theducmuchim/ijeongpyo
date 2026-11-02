@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AiWaiting, AppBar, CameraInput, Icon, MockBadge, PhotoView } from "@/components/ui";
+import { VoiceControl, useScreenSpeech } from "@/components/Voice";
 import { requestWhereAmI } from "@/lib/api";
 import { db } from "@/lib/db";
 import { blobToPayload, shrinkPhoto } from "@/lib/image";
 import { markLost, setResume } from "@/lib/resume";
 import { readLastCardOrder, useSettings } from "@/lib/settings";
 import { logEvent } from "@/lib/usageLog";
+import { type Command, speak, stopSpeaking } from "@/lib/voice";
 import type { ImagePayload, Route, WhereAmIResult } from "@/types";
 
 const MAX_TRIES = 3;
@@ -35,6 +37,7 @@ export default function LostPage() {
   const [result, setResult] = useState<WhereAmIResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [said, setSaid] = useState(""); // 말로 한 설명. 다음 사진과 같이 보낸다
   const settings = useSettings();
   const opened = useRef(false);
   // 걷기 화면이 마지막으로 보여 준 카드 번호 (route를 불러온 뒤, 휴대폰에서만 읽힌다)
@@ -55,6 +58,8 @@ export default function LostPage() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
+  useScreenSpeech(route ? "주변 사진을 찍으면 지금 위치를 찾아요. 간판이나 출구 번호가 보이게 찍어 주세요. 지금 보이는 것을 말로 설명해도 돼요." : null);
+
   async function onPhoto(file: File) {
     if (!route) return;
     setBusy(true);
@@ -65,27 +70,58 @@ export default function LostPage() {
       const all = [...photos, await blobToPayload(small)].slice(-MAX_TRIES);
       setPhotos(all);
       logEvent(route.id, "lost_photo", all.length);
-      const res = await requestWhereAmI({
-        photos: all,
-        lastCardOrder: lastOrder,
-        gps: await currentGps(),
-        cards: route.cards.map((c) => ({
-          order: c.order,
-          // 사진 없는 처음 가는 길 카드는 사진 설명 대신 길잡이 후보를 보낸다
-          photoDescription:
-            c.photoDescription || `사진 없음. 길잡이 후보: ${(c.candidates ?? []).map((x) => x.name).join(", ") || "없음"}`,
-          landmarkName: c.landmark.name,
-          instruction: c.instruction,
-          lat: c.lat,
-          lng: c.lng,
-        })),
-      });
-      setResult(res);
-      if (res.error) setError(res.error);
-      if (res.confidence >= 0.6 && !res.askPhoto) logEvent(route.id, "lost_found", all.length);
-      else if (all.length >= MAX_TRIES) logEvent(route.id, "lost_gave_up", all.length);
+      await locate(all, said);
     } catch (e) {
       setError((e as Error).message);
+      speak((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // 결과를 소리로도 들려준다
+  function speakResult(res: WhereAmIResult, tries: number) {
+    if (res.confidence >= 0.6 && !res.askPhoto) speak(`${res.reasonForUser} ${res.nextStep}`);
+    else if (tries >= MAX_TRIES) speak("세 번 찍어도 위치를 찾지 못했어요. 화면에 마지막으로 지나간 곳 사진이 있어요. 그곳으로 돌아가 주세요.");
+    else speak(`${res.askPhoto ?? "다른 방향도 한 장 찍어 주세요."} 사진만으로는 확실하지 않아요.`);
+  }
+
+  async function locate(all: ImagePayload[], saidText: string) {
+    if (!route) return;
+    const res = await requestWhereAmI({
+      photos: all,
+      said: saidText || undefined,
+      lastCardOrder: lastOrder,
+      gps: await currentGps(),
+      cards: route.cards.map((c) => ({
+        order: c.order,
+        // 사진 없는 처음 가는 길 카드는 사진 설명 대신 길잡이 후보를 보낸다
+        photoDescription:
+          c.photoDescription || `사진 없음. 길잡이 후보: ${(c.candidates ?? []).map((x) => x.name).join(", ") || "없음"}`,
+        landmarkName: c.landmark.name,
+        instruction: c.instruction,
+        lat: c.lat,
+        lng: c.lng,
+      })),
+    });
+    setResult(res);
+    if (res.error) setError(res.error);
+    if (res.confidence >= 0.6 && !res.askPhoto) logEvent(route.id, "lost_found", all.length);
+    else if (all.length >= MAX_TRIES) logEvent(route.id, "lost_gave_up", all.length);
+    speakResult(res, all.length);
+  }
+
+  // 사진을 찍은 뒤 말로 설명을 더하면, 같은 사진으로 다시 묻는다
+  async function onSaid(text: string) {
+    setSaid(text);
+    if (!photos.length) return speak("들었어요. 이제 주변 사진을 한 장 찍어 주세요.", { force: true });
+    setBusy(true);
+    setError(null);
+    try {
+      await locate(photos, text);
+    } catch (e) {
+      setError((e as Error).message);
+      speak((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -130,6 +166,32 @@ export default function LostPage() {
     setResume(route.id, order);
     router.push(`/walk/${route.id}`);
   };
+  const replan = () => {
+    try {
+      sessionStorage.setItem("ijeongpyo.planDest", JSON.stringify({ name: route.destName ?? route.name, ...route.dest }));
+    } catch {}
+    router.push("/plan");
+  };
+
+  const commands: Command[] = [
+    { id: "resume", say: ["다시 걷기", "이어서", "다시 걸을"], when: !!(confident && result?.matchedCardOrder) },
+    { id: "last", say: ["마지막 카드", "돌아갈", "돌아가기"] },
+    { id: "replan", say: ["다시 길 찾", "새로 찾", "길 다시"], when: route.kind === "planned" && !!route.dest },
+    { id: "ask", say: ["물어볼", "물어보기", "도와줘"] },
+    { id: "guardian", say: ["보호자", "전화", "위치 보내", "엄마", "아빠"], when: !!settings?.guardianShare },
+    { id: "repeat", say: ["다시 말해", "뭐라고", "한 번 더"] },
+    { id: "stop", say: ["그만", "조용"] },
+  ];
+  const routeId2 = route.id;
+  function onVoice(id: string) {
+    if (id === "resume" && result?.matchedCardOrder) backTo(result.matchedCardOrder);
+    else if (id === "last") backTo(lastCard.order);
+    else if (id === "replan") replan();
+    else if (id === "ask") router.push(`/ask/${routeId2}`);
+    else if (id === "guardian") shareLocation();
+    else if (id === "repeat" && result) speakResult(result, photos.length);
+    else if (id === "stop") stopSpeaking();
+  }
 
   return (
     <main className="screen">
@@ -196,6 +258,15 @@ export default function LostPage() {
           </div>
         )}
 
+        {said && !busy && <p className="chip label-medium">말한 내용: &ldquo;{said}&rdquo;</p>}
+        <VoiceControl
+          commands={commands}
+          onCommand={onVoice}
+          onOther={onSaid}
+          allowAlways
+          label="말로 설명하기"
+          examples={result ? "'다시 걷기', '마지막 카드', '물어보기'" : "'편의점 앞이에요', '큰길이 보여요'"}
+        />
         <p className="body-medium muted">길을 건널 때는 신호를 직접 확인하세요.</p>
         {error && <p className="banner body-medium">{error}</p>}
 
@@ -216,12 +287,7 @@ export default function LostPage() {
         {route.kind === "planned" && route.dest && (
           <button
             className="btn btn-outlined"
-            onClick={() => {
-              try {
-                sessionStorage.setItem("ijeongpyo.planDest", JSON.stringify({ name: route.destName ?? route.name, ...route.dest }));
-              } catch {}
-              router.push("/plan");
-            }}
+            onClick={replan}
           >
             여기서 다시 길 찾기
           </button>

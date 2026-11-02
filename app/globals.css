@@ -1375,3 +1375,20 @@ textarea.field { resize: vertical; min-height: 64px; }
 .shot-box img { width: 76px; height: 76px; object-fit: cover; border-radius: 10px; flex: none; }
 .shot-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .shot-text .btn-text { color: inherit; text-decoration: underline; }
+
+/* 말로 하기 */
+.voice-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.voice-bar .btn { flex: none; }
+.voice-hint { flex: 1 1 160px; min-width: 0; }
+.mic-on { animation: mic-pulse 1.2s ease-out infinite; }
+.voice-live { background: var(--primary-container); color: var(--on-primary-container); }
+.voice-live svg { animation: mic-blink 1.6s ease-in-out infinite; }
+.attention { animation: mic-pulse 1s ease-out 3; }
+@keyframes mic-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 45%, transparent); }
+  100% { box-shadow: 0 0 0 14px transparent; }
+}
+@keyframes mic-blink { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) {
+  .mic-on, .voice-live svg, .attention { animation: none; }
+}
