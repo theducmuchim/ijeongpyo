@@ -1,5 +1,6 @@
 import "server-only";
 import { distanceM } from "@/lib/geo";
+import { usableBuilding } from "@/lib/place";
 import type { Candidate, PlaceInfo } from "@/types";
 
 // 소상공인시장진흥공단 상가(상권)정보 API: 반경 안의 가게 (상호명, 업종, 층, 좌표). 이용허락범위 제한 없음.
@@ -72,7 +73,7 @@ export function placeOf(it: Item): PlaceInfo {
   const dong = s(it.ldongNm);
   const lot = num(it.lnoMnno, it.lnoSlno);
   const out: PlaceInfo = {};
-  const building = s(it.bldNm);
+  const building = usableBuilding(s(it.bldNm));
   if (building) out.building = building;
   if (roadName && roadNo) out.road = `${roadName} ${roadNo}`;
   if (dong && lot) out.jibun = `${dong} ${lot}`;

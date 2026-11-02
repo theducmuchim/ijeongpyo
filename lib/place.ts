@@ -1,6 +1,13 @@
 // 건물 이름과 번지를 화면과 소리에 쓰는 모양으로 만든다. (서버와 휴대폰 양쪽에서 쓴다)
 import type { Candidate, PlaceInfo } from "@/types";
 
+// 지도 데이터에 건물로 올라 있지만 길잡이가 못 되는 것(옮겨지거나 작은 노점·시설). 실제 응답에서 "가로판매대", "구두수선대"가 나왔다.
+const NOT_BUILDING = /(가로판매대|구두수선대|공중전화|공중화장실|버스정류장|택시승강장|변압기|부스|키오스크|매표소)$/;
+export const usableBuilding = (name?: string | null) => {
+  const n = (name ?? "").trim();
+  return n && !NOT_BUILDING.test(n) ? n : "";
+};
+
 export const hasPlace = (p?: PlaceInfo | null): p is PlaceInfo => !!p && !!(p.building || p.road || p.jibun);
 
 export function placeFromCandidate(c?: Candidate | null): PlaceInfo | undefined {

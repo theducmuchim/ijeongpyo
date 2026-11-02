@@ -1,4 +1,5 @@
 import "server-only";
+import { usableBuilding } from "@/lib/place";
 import type { Action, Place, PlaceInfo } from "@/types";
 
 // TMAP: 장소 검색(도착지 찾기)과 보행자 경로. 키는 서버 환경변수에만 둔다.
@@ -154,7 +155,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<PlaceInf
   const j = (await res.json()) as Json;
   const a = (j.addressInfo ?? {}) as Json;
   const out: PlaceInfo = {};
-  const building = str(a.buildingName).trim();
+  const building = usableBuilding(str(a.buildingName));
   if (building) out.building = building;
   const roadName = str(a.roadName).trim().split(" ").at(-1) ?? "";
   const idx = str(a.buildingIndex).trim();
