@@ -1,6 +1,7 @@
 "use client";
 
 import { db, savePhoto } from "@/lib/db";
+import { placeAsLandmark, placeFromCandidate } from "@/lib/place";
 import { sentenceFor } from "@/lib/sentence";
 import type { Card, CheckResult, Route } from "@/types";
 
@@ -10,15 +11,26 @@ export { sentenceFor };
 
 export const isDraft = (c: Card) => c.source === "draft" && !c.checkedAt;
 
-// '안 보여요': 다음 후보로 바꾼다. 후보가 없으면 방향만 안내한다.
+// '안 보여요': 다음 후보로 바꾼다. 후보가 없으면 가게가 있던 건물(이름이나 번호판)로, 그것도 없으면 방향만 안내한다.
 export function nextCandidate(card: Card): Card {
   const rest = (card.candidates ?? []).slice(1);
-  const name = rest[0]?.name ?? null;
+  const next = rest[0];
+  const crossing = /횡단보도/.test(card.instruction);
+  if (next) {
+    return {
+      ...card,
+      candidates: rest,
+      landmark: { name: next.name, side: card.landmark.side },
+      instruction: sentenceFor(next.name, card.action, crossing),
+      place: placeFromCandidate(next) ?? (card.place?.near ? card.place : undefined), // 없으면 그 지점 주소를 다시 찾는다
+    };
+  }
+  const building = card.landmark.name === placeAsLandmark(card.place) ? null : placeAsLandmark(card.place);
   return {
     ...card,
-    candidates: rest,
-    landmark: { name: name ?? "", side: card.landmark.side },
-    instruction: sentenceFor(name, card.action, /횡단보도/.test(card.instruction)),
+    candidates: [],
+    landmark: { name: building ?? "", side: card.landmark.side },
+    instruction: sentenceFor(building, card.action, crossing),
   };
 }
 

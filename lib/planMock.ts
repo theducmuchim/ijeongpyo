@@ -13,12 +13,12 @@ export function mockPlaces(q: string, lat?: number, lng?: number): Place[] {
 }
 
 const SHOPS = [
-  { name: "꽃집 초록뜰", category: "꽃집" },
-  { name: "온누리약국", category: "약국" },
-  { name: "하늘편의점", category: "편의점" },
-  { name: "바삭빵집", category: "제과점" },
-  { name: "분식 한그릇", category: "분식" },
-  { name: "새마을세탁소", category: "세탁소" },
+  { name: "꽃집 초록뜰", category: "꽃집", building: "(시험) 한빛빌딩", road: "중앙로 12", jibun: "은행동 45-6" },
+  { name: "온누리약국", category: "약국", building: "(시험) 새솔빌딩", road: "중앙로 30", jibun: "은행동 51" },
+  { name: "하늘편의점", category: "편의점", road: "대종로 488", jibun: "은행동 60-2" },
+  { name: "바삭빵집", category: "제과점", building: "(시험) 해들상가", road: "대종로 501", jibun: "선화동 12" },
+  { name: "분식 한그릇", category: "분식", road: "중교로 7", jibun: "선화동 3-1" },
+  { name: "새마을세탁소", category: "세탁소", building: "(시험) 푸른주택", road: "중교로 15", jibun: "선화동 8" },
 ];
 
 // 출발지에서 도착지까지 'ㄹ'자로 꺾는 가짜 경로: 꺾는 곳 3군데 + 도착
@@ -50,4 +50,10 @@ export function mockStoresNear(lat: number, lng: number, i: number): NearStore[]
     const shop = SHOPS[(i * 2 + k) % SHOPS.length];
     return { ...shop, floor: k === 2 ? "2" : "1", lat: lat + 0.0001 * (k + 1), lng: lng - 0.0001 * k, dist: 12 + k * 9 };
   });
+}
+
+// 시험 모드: 좌표만으로 건물 이름과 번지를 지어낸다
+export function mockPlace(lat: number, lng: number) {
+  const n = Math.abs(Math.round(lat * 10000 + lng * 10000)) % 90;
+  return { building: n % 2 ? `(시험) 건물${n}` : undefined, road: `중앙로 ${n + 10}`, jibun: `은행동 ${n + 1}`, near: true };
 }

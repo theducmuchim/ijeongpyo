@@ -5,6 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { CornerBlob, LineIcon, TabBar, TONES } from "@/components/brand";
 import { Roadview } from "@/components/Roadview";
 import { AiWaiting, AppBar, CameraInput, Icon, MockBadge } from "@/components/ui";
+import { PlaceLine } from "@/components/Place";
 import { DictateButton, VoiceControl, useScreenSpeech } from "@/components/Voice";
 import { requestCheck, requestPlaces, requestPlan } from "@/lib/api";
 import { db, newId, savePhoto } from "@/lib/db";
@@ -13,6 +14,7 @@ import { josa } from "@/lib/josa";
 import { toast } from "@/lib/toast";
 import { bearingDeg, distanceM } from "@/lib/geo";
 import { logEvent } from "@/lib/usageLog";
+import { placeSpeech } from "@/lib/place";
 import { type Command, PLAN_QUERY_KEY, speak } from "@/lib/voice";
 import type { Card, CheckResult, Place, PlanCard, PlanResult, Route } from "@/types";
 
@@ -236,6 +238,7 @@ export default function PlanPage() {
           lng: c.lng,
           source: "photo",
           candidates: c.candidates,
+          place: c.place,
           checkedAt: new Date().toISOString(),
         };
       }
@@ -253,6 +256,7 @@ export default function PlanPage() {
       lng: c.lng,
       source: "draft",
       candidates: c.candidates,
+      place: c.place,
       };
     });
     const route: Route = {
@@ -282,7 +286,7 @@ export default function PlanPage() {
     if (!plan) return;
     if (id === "go") save();
     else if (id === "back") setPlan(null);
-    else if (id === "read") plan.cards.forEach((c, i) => speak(`${c.order}번. ${c.instruction}`, { queue: i > 0, force: true }));
+    else if (id === "read") plan.cards.forEach((c, i) => speak(`${c.order}번. ${c.instruction}. ${placeSpeech(c.place)}`.trim(), { queue: i > 0, force: true }));
   }
   useScreenSpeech(
     busy === "plan"
@@ -356,6 +360,7 @@ export default function PlanPage() {
                         <LineIcon name="pin" size={16} /> {c.landmark.name}
                       </p>
                     )}
+                    <PlaceLine place={c.place} className="t-meta" />
                     {c.candidates.length > 1 && (
                       <p className="t-meta muted">
                         <LineIcon name="cards" size={16} /> 안 보이면 {c.candidates.slice(1).map((x) => x.name).join(", ")}

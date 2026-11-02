@@ -17,8 +17,16 @@ export type Route = {
 // 연습 모드: 1 전부 보기, 2 문장만, 3 꺾는 곳에서만
 export type PracticeLevel = 1 | 2 | 3;
 
+// 건물 이름과 번지. 가게(상호)는 문을 닫거나 바뀌어도 건물 이름과 건물 번호판은 오래 남는다.
+export type PlaceInfo = {
+  building?: string; // 건물 이름 (예: 중앙빌딩)
+  road?: string; // 도로명 주소의 길 이름과 건물 번호 (예: 중앙로 123) — 건물 벽 번호판에 적힌 것
+  jibun?: string; // 동 이름과 지번 (예: 은행동 45-6)
+  near?: boolean; // 갈림길 위치로 찾은 근처 건물 (GPS가 틀리면 바로 옆 건물일 수 있음)
+};
+
 // 처음 가는 길의 길잡이 후보 (상가정보 공공데이터에서 온 가게)
-export type Candidate = { name: string; category?: string; floor?: string; lat: number; lng: number };
+export type Candidate = { name: string; category?: string; floor?: string; lat: number; lng: number } & PlaceInfo;
 
 export type Side = "left" | "right" | "ahead";
 export type Action = "straight" | "left" | "right" | "arrive";
@@ -39,6 +47,7 @@ export type Card = {
   source?: "photo" | "draft"; // 사진으로 등록 / 지도 데이터 초안(아직 사진 없음). 없으면 photo
   candidates?: Candidate[]; // 초안 카드의 길잡이 후보 (첫 번째가 지금 길잡이)
   checkedAt?: string; // 처음 걸을 때 길잡이를 확인한 시각
+  place?: PlaceInfo; // 길잡이가 있는 건물 이름과 번지. 빈 값({})이면 찾아봤지만 없었다는 뜻
 };
 
 // 등록 중에 모으는 갈림길 하나 (아직 AI가 정리하기 전)
@@ -116,6 +125,7 @@ export type PlanCard = {
   instruction: string;
   landmark: { name: string; side: Side };
   candidates: Candidate[];
+  place?: PlaceInfo;
   lat: number;
   lng: number;
 };

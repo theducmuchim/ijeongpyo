@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AiWaiting, AppBar, CameraInput, Icon, IconLink, PhotoView } from "@/components/ui";
+import { PlaceLine } from "@/components/Place";
 import { VoiceControl } from "@/components/Voice";
 import { requestCheck } from "@/lib/api";
 import { db } from "@/lib/db";
@@ -17,7 +18,9 @@ import {
   distanceToTrackM,
 } from "@/lib/geo";
 import { blobToPayload, shrinkPhoto } from "@/lib/image";
+import { fillPlaces } from "@/lib/fillPlaces";
 import { josa } from "@/lib/josa";
+import { placeSpeech } from "@/lib/place";
 import { clearLost, setResume, takeResume, wasLost } from "@/lib/resume";
 import { lastCardKey, loadSettings } from "@/lib/settings";
 import { toast } from "@/lib/toast";
@@ -40,7 +43,7 @@ const NEAR_M = 70; // 내비처럼: 다음 갈림길 70m 안에 들면 "곧 갈�
 // 다음 갈림길이 가까워졌을 때 미리 들려줄 말
 function nearText(c: Card): string {
   if (c.action === "arrive") return `곧 도착해요. ${c.instruction}`;
-  if (isDraft(c) && c.landmark.name) return `곧 갈림길이에요. ${josa(c.landmark.name, "이/가")} 보이나요?`;
+  if (isDraft(c) && c.landmark.name) return `곧 갈림길이에요. ${josa(c.landmark.name, "이/가")} 보이나요? ${placeSpeech(c.place)}`.trim();
   return `곧 갈림길이에요. ${c.instruction}`;
 }
 
@@ -303,6 +306,7 @@ function DraftPanel({ route, index, onChange }: { route: Route; index: number; o
           <p className="body-medium muted">
             {[cand?.category, cand?.floor ? `${cand.floor}층` : null].filter(Boolean).join(" · ") || "지도 데이터에서 고른 길잡이"}
           </p>
+          <PlaceLine place={card.place} />
           <p className="title-medium" style={{ marginTop: 8 }}>
             {josa(name, "이/가")} 보이나요?
           </p>
@@ -405,6 +409,13 @@ export default function WalkPage() {
         }
       }
       setRoute(r ?? null);
+      // 건물 이름과 번지가 없는 카드는 위치로 채운다 (예전에 만든 길, 같이 걸으며 등록한 길)
+      if (r)
+        fillPlaces(r).then((u) => {
+          if (!u) return;
+          const found = new Map(u.cards.map((c) => [c.id, c.place]));
+          setRoute((cur) => (cur ? { ...cur, cards: cur.cards.map((c) => (c.place === undefined ? { ...c, place: found.get(c.id) } : c)) } : cur));
+        });
     });
   }, [routeId]);
 
@@ -511,7 +522,7 @@ export default function WalkPage() {
             alerted.current.add(now.order);
             setApproach(true);
             buzz([80, 80, 80]);
-            if (now.landmark.name) speak(`곧 갈림길이에요. ${josa(now.landmark.name, "이/가")} 보이나요?`, { queue: true });
+            if (now.landmark.name) speak(`곧 갈림길이에요. ${josa(now.landmark.name, "이/가")} 보이나요? ${placeSpeech(now.place)}`.trim(), { queue: true });
           }
         }
         if (route.track && route.track.length > 5) {
@@ -587,6 +598,7 @@ export default function WalkPage() {
     { id: "photo", say: ["사진"], when: !draft },
     { id: "arrive", say: ["도착"], when: isLast },
     { id: "ask", say: ["물어볼", "도와줘", "도움"] },
+    { id: "place", say: ["건물", "주소", "번지", "번호판"] },
     { id: "stop", say: ["그만", "조용", "멈춰"] },
     { id: "home", say: ["홈으로", "처음 화면"] },
   ];
@@ -615,6 +627,7 @@ export default function WalkPage() {
       router.push(`/${id}/${route.id}`);
     } else if (id === "photo") setShowPhoto(true);
     else if (id === "arrive") arrive();
+    else if (id === "place") speak(placeSpeech(card.place) || "이 카드에는 건물 이름과 번지가 없어요.", { force: true });
     else if (id === "stop") stopSpeaking();
     else if (id === "home") router.push("/");
   }
@@ -664,6 +677,7 @@ export default function WalkPage() {
               {card.instruction}
             </p>
           )}
+          {!minimal && !draft && <PlaceLine place={card.place} />}
           {level === 1 && !draft && <p className="body-large muted">{next ? `다음 길잡이: ${next.landmark.name || "방향만 안내"}` : "마지막 카드예요"}</p>}
         </div>
 

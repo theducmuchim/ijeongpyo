@@ -1392,3 +1392,7 @@ textarea.field { resize: vertical; min-height: 64px; }
 @media (prefers-reduced-motion: reduce) {
   .mic-on, .voice-live svg, .attention { animation: none; }
 }
+
+/* 건물 이름과 번지 */
+.place-line { display: flex; align-items: flex-start; gap: 6px; margin: 0; }
+.place-line svg { flex: none; margin-top: 2px; }

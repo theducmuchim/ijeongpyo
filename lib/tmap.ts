@@ -1,5 +1,5 @@
 import "server-only";
-import type { Action, Place } from "@/types";
+import type { Action, Place, PlaceInfo } from "@/types";
 
 // TMAP: 장소 검색(도착지 찾기)과 보행자 경로. 키는 서버 환경변수에만 둔다.
 // 응답 칸 이름은 공개된 예제(보행자 경로: turnType, pointType, description, nearPoiName, totalDistance, totalTime)로 확인했다.
@@ -141,4 +141,37 @@ export async function pedestrianRoute(start: { lat: number; lng: number }, end: 
     points.push({ lat: end.lat, lng: end.lng, action: "arrive", crossing: false, description: "도착", nearPoiName: end.name });
   }
   return { points: mergeClose(points), track, totalDistance, totalTime };
+}
+
+// 좌표 → 그 자리 건물 이름과 번지 (TMAP 역지오코딩). 가게가 없어져도 건물 번호판으로 찾을 수 있게 카드에 같이 적는다.
+// 응답 칸(addressInfo.buildingName, roadName, buildingIndex, legalDong, bunji)은 문서 예제로 확인했고,
+// 모양이 달라도 fullAddress에서 뽑을 수 있게 한다.
+export async function reverseGeocode(lat: number, lng: number): Promise<PlaceInfo | null> {
+  const p = new URLSearchParams({ version: "1", lat: String(lat), lon: String(lng), coordType: "WGS84GEO", addressType: "A10", newAddressExtend: "Y" });
+  const res = await fetch(`${BASE}/geo/reversegeocoding?${p}`, { headers: { appKey: KEY!, Accept: "application/json" }, cache: "no-store" });
+  if (res.status === 204) return null;
+  if (!res.ok) throw new Error(`TMAP 주소 찾기 오류 ${res.status}`);
+  const j = (await res.json()) as Json;
+  const a = (j.addressInfo ?? {}) as Json;
+  const out: PlaceInfo = {};
+  const building = str(a.buildingName).trim();
+  if (building) out.building = building;
+  const roadName = str(a.roadName).trim().split(" ").at(-1) ?? "";
+  const idx = str(a.buildingIndex).trim();
+  if (roadName && idx) out.road = `${roadName} ${idx}`;
+  const dong = str(a.legalDong || a.adminDong).trim();
+  const bunji = str(a.bunji).trim();
+  if (dong && bunji) out.jibun = `${dong} ${bunji}`;
+  // 칸이 비어 있으면 fullAddress("…시 …구 …동 45-6,…시 …구 중앙로 123")에서 찾는다
+  if (!out.road || !out.jibun) {
+    for (const part of str(a.fullAddress).split(",")) {
+      const w = part.trim().split(/\s+/);
+      const last = w.at(-1) ?? "";
+      const prev = w.at(-2) ?? "";
+      if (!/^\d+(-\d+)?$/.test(last)) continue;
+      if (/(로|길)$/.test(prev) && !out.road) out.road = `${prev} ${last}`;
+      else if (/(동|가|리)$/.test(prev) && !out.jibun) out.jibun = `${prev} ${last}`;
+    }
+  }
+  return out.building || out.road || out.jibun ? out : null;
 }

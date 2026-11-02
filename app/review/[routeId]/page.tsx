@@ -3,7 +3,9 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppBar, CameraInput, Icon, PhotoView, SkeletonList, useConfirm } from "@/components/ui";
+import { PlaceLine } from "@/components/Place";
 import { DictateButton, VoiceControl, useScreenSpeech } from "@/components/Voice";
+import { fillPlaces } from "@/lib/fillPlaces";
 import { db, deleteRoute, savePhoto } from "@/lib/db";
 import { shrinkPhoto } from "@/lib/image";
 import { applyReplacement, suggestReplacement } from "@/lib/replaceCard";
@@ -23,7 +25,16 @@ export default function ReviewPage() {
   const [dialog, ask] = useConfirm();
 
   useEffect(() => {
-    db.routes.get(routeId).then((r) => setRoute(r ?? null));
+    db.routes.get(routeId).then((r) => {
+      setRoute(r ?? null);
+      // 같이 걸으며 등록한 길은 카드 위치로 근처 건물 이름과 번지를 찾아 붙인다
+      if (r)
+        fillPlaces(r).then((u) => {
+          if (!u) return;
+          const found = new Map(u.cards.map((c) => [c.id, c.place]));
+          setRoute((cur) => (cur ? { ...cur, cards: cur.cards.map((c) => (c.place === undefined ? { ...c, place: found.get(c.id) } : c)) } : cur));
+        });
+    });
   }, [routeId]);
 
   useScreenSpeech(route ? `카드 ${route.cards.length}장이에요. 문장이 어색하면 눌러서 고치거나, 마이크를 눌러 말로 고쳐 주세요.` : null);
@@ -155,6 +166,7 @@ export default function ReviewPage() {
                       />
                     </div>
                   )}
+                  <PlaceLine place={c.place} className="label-medium muted" />
                   {c.userNote && <p className="label-medium muted">메모: “{c.userNote}”</p>}
                 </div>
               </div>

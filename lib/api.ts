@@ -1,7 +1,7 @@
 "use client";
 
 import { deviceId } from "@/lib/settings";
-import type { Action, CardDraft, CheckResult, ImagePayload, Place, PlanResult, ReplaceResult, Side, WhereAmIResult } from "@/types";
+import type { Action, CardDraft, CheckResult, ImagePayload, Place, PlaceInfo, PlanResult, ReplaceResult, Side, WhereAmIResult } from "@/types";
 
 // 휴대폰은 AI나 TMAP을 직접 부르지 않고 항상 우리 서버 주소만 부른다.
 async function post<T>(path: string, body: unknown): Promise<T> {
@@ -42,6 +42,9 @@ export const requestReplace = (body: {
   prevInstruction?: string;
   nextInstruction?: string;
 }) => post<ReplaceResult>("/api/replace-landmark", body);
+
+export const requestNearAddress = (points: { lat: number; lng: number }[]) =>
+  post<{ places: (PlaceInfo | null)[]; mock?: boolean }>("/api/near-address", { points });
 
 export const requestPlaces = (q: string, lat?: number, lng?: number) =>
   post<{ places: Place[]; mock?: boolean }>("/api/search-place", { q, lat, lng });

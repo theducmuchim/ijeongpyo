@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AiWaiting, AppBar, CameraInput, Icon, MockBadge, PhotoView } from "@/components/ui";
+import { PlaceLine } from "@/components/Place";
 import { VoiceControl, useScreenSpeech } from "@/components/Voice";
+import { hasPlace, placeText } from "@/lib/place";
 import { requestWhereAmI } from "@/lib/api";
 import { db } from "@/lib/db";
 import { blobToPayload, shrinkPhoto } from "@/lib/image";
@@ -96,8 +98,10 @@ export default function LostPage() {
       cards: route.cards.map((c) => ({
         order: c.order,
         // 사진 없는 처음 가는 길 카드는 사진 설명 대신 길잡이 후보를 보낸다
+        // 건물 이름과 번호판(도로명 주소)도 같이 보낸다. 가게가 바뀌어도 사진 속 건물 이름·번호판으로 맞출 수 있다
         photoDescription:
-          c.photoDescription || `사진 없음. 길잡이 후보: ${(c.candidates ?? []).map((x) => x.name).join(", ") || "없음"}`,
+          (c.photoDescription || `사진 없음. 길잡이 후보: ${(c.candidates ?? []).map((x) => x.name).join(", ") || "없음"}`) +
+          (hasPlace(c.place) ? ` / 건물·번지${c.place.near ? "(근처)" : ""}: ${placeText(c.place)}` : ""),
         landmarkName: c.landmark.name,
         instruction: c.instruction,
         lat: c.lat,
@@ -240,6 +244,7 @@ export default function LostPage() {
             <p className="label-large">다음에 할 일</p>
             <p className="guide">{result.nextStep}</p>
             <p className="body-medium">{result.reasonForUser}</p>
+            <PlaceLine place={route.cards.find((c) => c.order === result.matchedCardOrder)?.place} className="body-medium" />
           </div>
         )}
 
@@ -255,6 +260,7 @@ export default function LostPage() {
             <p className="title-medium">마지막으로 지나간 곳이에요</p>
             <PhotoView photoId={lastCard.photoId} height={200} caption={`${lastCard.order}번 카드 사진`} />
             <p className="body-medium muted">{lastCard.order}번 카드: {lastCard.instruction}</p>
+            <PlaceLine place={lastCard.place} className="body-medium muted" />
           </div>
         )}
 

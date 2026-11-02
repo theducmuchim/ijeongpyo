@@ -1,11 +1,12 @@
 import { askAI, friendlyError, isMockMode } from "@/lib/ai";
-import { mockRoute, mockStoresNear } from "@/lib/planMock";
+import { mockPlace, mockRoute, mockStoresNear } from "@/lib/planMock";
 import { PLAN_ROUTE_PROMPT } from "@/lib/prompts";
 import { checkLimit } from "@/lib/rateLimit";
 import { parsePlan } from "@/lib/schemas";
 import { sentenceFor } from "@/lib/sentence";
 import { hasStores, rankForLandmark, storesNear, type NearStore } from "@/lib/stores";
-import { hasTmap, pedestrianRoute, type TurnPoint } from "@/lib/tmap";
+import { placeFromCandidate } from "@/lib/place";
+import { hasTmap, pedestrianRoute, reverseGeocode, type TurnPoint } from "@/lib/tmap";
 import type { Candidate, PlanCard, PlanResult } from "@/types";
 
 export const maxDuration = 60;
@@ -15,7 +16,7 @@ type Body = { start?: { lat: number; lng: number }; end?: { lat: number; lng: nu
 
 const ok = (p?: { lat: number; lng: number }) => !!p && Number.isFinite(p.lat) && Number.isFinite(p.lng);
 const ACTION_KO = { straight: "곧장", left: "왼쪽으로 꺾기", right: "오른쪽으로 꺾기", arrive: "도착" } as const;
-const toCandidate = ({ name, category, floor, lat, lng }: NearStore): Candidate => ({ name, category, floor, lat, lng });
+const toCandidate = ({ name, category, floor, lat, lng, building, road, jibun }: NearStore): Candidate => ({ name, category, floor, lat, lng, building, road, jibun });
 
 // 처음 가는 길: 출발·도착 → TMAP 보행자 경로 → 꺾는 지점마다 주변 가게 → AI가 길잡이를 고르고 문장을 쓴다.
 // 키가 없는 서비스는 시험용 데이터로 대신한다(시험 모드).
@@ -103,8 +104,27 @@ export async function POST(req: Request) {
       // 문장은 AI에게 맡기지 않고 틀로 만든다. 실제로 돌려 보니 AI가 횡단보도를 "곧장 가세요"로 쓰거나
       // "도착했습니다"처럼 말투가 어긋나는 일이 있었다. AI는 잘 보이는 길잡이를 고르는 일만 한다.
       const instruction = sentenceFor(first, p.action, p.crossing);
-      return { order: i + 1, action: p.action, instruction, landmark: { name: first ?? "", side: "ahead" }, candidates, lat: p.lat, lng: p.lng };
+      return { order: i + 1, action: p.action, instruction, landmark: { name: first ?? "", side: "ahead" }, candidates, place: placeFromCandidate(candidates[0]), lat: p.lat, lng: p.lng };
     });
+
+    // 4. 가게 건물 정보가 없는 카드(도착, 후보 없음, TMAP 이름만 있는 곳)는 그 지점의 건물 이름과 번지를 찾는다
+    if (hasTmap()) {
+      const need = cards.map((c, i) => (c.place ? -1 : i)).filter((i) => i >= 0);
+      for (let k = 0; k < need.length; k += 4) {
+        await Promise.all(
+          need.slice(k, k + 4).map(async (i) => {
+            try {
+              const pl = await reverseGeocode(cards[i].lat, cards[i].lng);
+              if (pl) cards[i].place = { ...pl, near: true };
+            } catch (e) {
+              console.error("[plan-route] 주소 찾기", String((e as Error).message).slice(0, 200));
+            }
+          }),
+        );
+      }
+    } else {
+      for (const c of cards) c.place ??= mockPlace(c.lat, c.lng);
+    }
 
     const missing = [!hasTmap() && "TMAP", !hasStores() && "상가정보", isMockMode() && "AI"].filter((x): x is string => !!x);
     const result: PlanResult = { cards, track: route.track, totalDistance: route.totalDistance, totalTime: route.totalTime, mock, missing };

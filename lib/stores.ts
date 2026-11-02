@@ -1,10 +1,11 @@
 import "server-only";
 import { distanceM } from "@/lib/geo";
-import type { Candidate } from "@/types";
+import type { Candidate, PlaceInfo } from "@/types";
 
 // 소상공인시장진흥공단 상가(상권)정보 API: 반경 안의 가게 (상호명, 업종, 층, 좌표). 이용허락범위 제한 없음.
 // 주소와 칸 이름은 공개 라이브러리(PublicDataReader)의 코드로 확인했다: sdsc2/storeListInRadius, radius·cx(경도)·cy(위도),
-// 응답 칸 bizesNm(상호명), brchNm(지점명), indsMclsNm·indsSclsNm(업종), flrNo(층), lon, lat.
+// 응답 칸 bizesNm(상호명), brchNm(지점명), indsMclsNm·indsSclsNm(업종), flrNo(층), lon, lat,
+// bldNm(건물명), rdnm(도로명)·bldMnno·bldSlno(건물 번호), ldongNm(법정동)·lnoMnno·lnoSlno(지번).
 const KEY = process.env.DATA_GO_KR_KEY;
 export const hasStores = () => !!KEY;
 
@@ -49,12 +50,33 @@ export async function storesNear(lat: number, lng: number, radius = 40, rows = 8
         name: [s(it.bizesNm), s(it.brchNm)].filter(Boolean).join(" "),
         category: s(it.indsSclsNm) || s(it.indsMclsNm),
         floor: s(it.flrNo),
+        ...placeOf(it),
         lat: la,
         lng: lo,
         dist: Math.round(distanceM(lat, lng, la, lo)),
       };
     })
     .filter((x) => x.name && Number.isFinite(x.lat) && Number.isFinite(x.lng));
+}
+
+const num = (a: unknown, b: unknown) => {
+  const main = s(a).replace(/^0+(?=\d)/, "");
+  const sub = s(b).replace(/^0+/, "");
+  return main && main !== "0" ? (sub ? `${main}-${sub}` : main) : "";
+};
+
+// 가게가 있는 건물: 건물 이름, 도로명(번호판), 지번
+export function placeOf(it: Item): PlaceInfo {
+  const roadName = s(it.rdnm).split(" ").at(-1) ?? "";
+  const roadNo = num(it.bldMnno, it.bldSlno);
+  const dong = s(it.ldongNm);
+  const lot = num(it.lnoMnno, it.lnoSlno);
+  const out: PlaceInfo = {};
+  const building = s(it.bldNm);
+  if (building) out.building = building;
+  if (roadName && roadNo) out.road = `${roadName} ${roadNo}`;
+  if (dong && lot) out.jibun = `${dong} ${lot}`;
+  return out;
 }
 
 // 거리에서 잘 보이는 가게를 앞에 둔다: 1층(또는 층 정보 없음) → 가까운 순

@@ -1,6 +1,6 @@
 import { aiTrace, askAI, isMockMode, tuning } from "@/lib/ai";
 import { hasStores, rankForLandmark, storesNear } from "@/lib/stores";
-import { hasTmap, pedestrianRoute, searchPlaces } from "@/lib/tmap";
+import { hasTmap, pedestrianRoute, reverseGeocode, searchPlaces } from "@/lib/tmap";
 import { POST as cardsFromWalk } from "../cards-from-walk/route";
 import { POST as checkLandmark } from "../check-landmark/route";
 import { POST as replaceLandmark } from "../replace-landmark/route";
@@ -90,6 +90,16 @@ export async function GET(req: Request) {
   }
 
   // ?plan=1: 카드 초안을 실제로 한 번 만들어 본다 (대전역 근처 → 대전역)
+  // 건물 이름과 번지: TMAP 역지오코딩과 상가정보의 건물 칸
+  if (url.searchParams.get("addr")) {
+    const [rev, rev2, shops] = await Promise.all([
+      probe(() => reverseGeocode(NEAR.lat, NEAR.lng)),
+      probe(() => reverseGeocode(DAEJEON_STATION.lat, DAEJEON_STATION.lng)),
+      probe(async () => rankForLandmark(await storesNear(NEAR.lat, NEAR.lng, 60, 40), 5)),
+    ]);
+    return Response.json({ rev, rev2, shops });
+  }
+
   if (url.searchParams.get("plan")) {
     const r = await planRoute(
       new Request("http://local/api/plan-route", {
