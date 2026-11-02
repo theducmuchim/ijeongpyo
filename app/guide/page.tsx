@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TabBar } from "@/components/brand";
 import { AppBar, Icon } from "@/components/ui";
 
 export const metadata = { title: "사용 설명서 · 이정표" };
@@ -69,8 +70,8 @@ const FAQ: [string, React.ReactNode][] = [
 
 export default function GuidePage() {
   return (
-    <main className="screen">
-      <AppBar title="사용 설명서" back="/" />
+    <main className="screen with-tabs">
+      <AppBar title="사용 설명서" />
       <div className="body" style={{ gap: 24 }}>
         <div className="coach">
           <p className="title-large">이정표는 이렇게 써요</p>
@@ -273,6 +274,7 @@ export default function GuidePage() {
           </Link>
         </div>
       </div>
+      <TabBar />
     </main>
   );
 }

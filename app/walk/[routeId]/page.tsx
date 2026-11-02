@@ -304,6 +304,37 @@ function DraftPanel({ route, index, onChange }: { route: Route; index: number; o
   );
 }
 
+const SHORT: Record<string, string> = { left: "왼쪽", right: "오른쪽", straight: "곧장", arrive: "도착" };
+
+// 시안의 날짜 줄(일~토, 고른 날은 주황 칸)을 카드 순서로 바꾼 것. 지금 카드는 크게, 줄에서는 주황 칸.
+function StepStrip({ route, index }: { route: Route; index: number }) {
+  const total = route.cards.length;
+  const card = route.cards[index];
+  const strip = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    strip.current?.querySelector(".step.on")?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [index]);
+  return (
+    <div className="walk-head">
+      <div className="walk-date" aria-label={`${total}장 중 ${index + 1}번째 카드`}>
+        <span className="walk-num">{index + 1}</span>
+        <span className="walk-of">
+          <b>{SHORT[card.action] ?? ""}</b>
+          <small>{total}장 중</small>
+        </span>
+      </div>
+      <div className="step-strip" ref={strip} aria-hidden="true">
+        {route.cards.map((c, i) => (
+          <span key={c.id} className={`step${i === index ? " on" : i < index ? " done" : ""}`}>
+            <small>{SHORT[c.action] ?? ""}</small>
+            <b>{i + 1}</b>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function WalkPage() {
   const { routeId } = useParams<{ routeId: string }>();
   const [route, setRoute] = useState<Route | null | undefined>(undefined);
@@ -475,14 +506,7 @@ export default function WalkPage() {
     <main className="screen">
       <AppBar title={route.name} back="/" trailing={<IconLink href={`/review/${route.id}`} icon="edit" label="카드 고치기" />} />
       <div className="body">
-        <div className="progress">
-          <span className="label-large muted" aria-label={`${total}장 중 ${index + 1}번째 카드`}>
-            {index + 1} / {total}
-          </span>
-          <div className="track" aria-hidden="true">
-            <div className="fill" style={{ width: `${((index + 1) / total) * 100}%` }} />
-          </div>
-        </div>
+        <StepStrip route={route} index={index} />
         {(route.practiceLevel ?? 1) > 1 && (
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span className="chip label-medium">연습 · {LEVEL_TEXT[level]}</span>

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { CornerBlob, LineIcon, TabBar, TONES } from "@/components/brand";
 import { Roadview } from "@/components/Roadview";
 import { AiWaiting, AppBar, Icon, MockBadge } from "@/components/ui";
 import { requestPlaces, requestPlan } from "@/lib/api";
@@ -12,7 +13,7 @@ import type { Card, Place, PlanResult, Route } from "@/types";
 
 // 처음 가는 길: 도착지를 고르면 지도 데이터로 사진 없는 카드 초안을 만들고, 미리 둘러본 뒤 걷는다.
 
-const ACTION_LABEL = { straight: "곧장", left: "왼쪽으로", right: "오른쪽으로", arrive: "도착" } as const;
+const SHORT_LABEL = { straight: "곧장", left: "왼쪽", right: "오른쪽", arrive: "도착" } as const;
 
 // '길을 잃었어요'에서 '여기서 다시 길 찾기'로 오면 도착지가 미리 들어 있다
 let destCache: (Place & { from?: string }) | null | undefined;
@@ -174,24 +175,39 @@ export default function PlanPage() {
           <p className="body-medium muted">
             사진이 없는 카드예요. 걸으면서 길잡이가 보이면 사진을 찍어 채워요. 카드마다 로드뷰로 미리 둘러볼 수 있어요.
           </p>
-          <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="timeline stagger">
+            <div className="timeline-head">
+              <span>순서</span>
+              <span>할 일</span>
+            </div>
             {plan.cards.map((c, i) => {
               const nx = plan.cards[i + 1];
               const heading = nx ? bearingDeg(c.lat, c.lng, nx.lat, nx.lng) : undefined;
+              const tone = c.action === "arrive" ? TONES[3] : i === 0 ? TONES[0] : null;
               return (
-                <div key={c.order} className="surface-card" style={{ gap: 8 }}>
-                  <p className="label-medium primary-text">
-                    {c.order}번 · {ACTION_LABEL[c.action]}
-                    {c.landmark.name ? ` · 길잡이: ${c.landmark.name}` : ""}
-                  </p>
-                  <p className="title-medium">{c.instruction}</p>
-                  {c.candidates.length > 1 && (
-                    <p className="body-medium muted">안 보이면: {c.candidates.slice(1).map((x) => x.name).join(", ")}</p>
-                  )}
-                  <button className="btn btn-text label-large" style={{ alignSelf: "flex-start" }} onClick={() => setOpen(open === i ? null : i)}>
-                    <Icon name="image" size={18} /> {open === i ? "로드뷰 닫기" : "로드뷰로 미리 보기"}
-                  </button>
-                  {open === i && <Roadview lat={c.lat} lng={c.lng} heading={heading} />}
+                <div key={c.order} className="t-row">
+                  <div className="t-num">
+                    <b>{c.order}</b>
+                    <small>{SHORT_LABEL[c.action]}</small>
+                  </div>
+                  <div className={`t-card${tone ? " tone" : ""}`} style={tone ? { background: tone.bg } : undefined}>
+                    {tone && <CornerBlob color={tone.blob} />}
+                    <p className="t-title">{c.instruction}</p>
+                    {c.landmark.name && (
+                      <p className="t-meta">
+                        <LineIcon name="pin" size={16} /> {c.landmark.name}
+                      </p>
+                    )}
+                    {c.candidates.length > 1 && (
+                      <p className="t-meta muted">
+                        <LineIcon name="cards" size={16} /> 안 보이면 {c.candidates.slice(1).map((x) => x.name).join(", ")}
+                      </p>
+                    )}
+                    <button className="btn btn-text label-large" style={{ alignSelf: "flex-start", padding: 0, minHeight: 36, position: "relative" }} onClick={() => setOpen(open === i ? null : i)}>
+                      <Icon name="image" size={18} /> {open === i ? "로드뷰 닫기" : "로드뷰로 미리 보기"}
+                    </button>
+                    {open === i && <Roadview lat={c.lat} lng={c.lng} heading={heading} />}
+                  </div>
                 </div>
               );
             })}
@@ -214,8 +230,8 @@ export default function PlanPage() {
   }
 
   return (
-    <main className="screen">
-      <AppBar title="처음 가는 길" back="/" />
+    <main className="screen with-tabs">
+      <AppBar title="처음 가는 길" />
       <div className="body">
         <p className="body-large">도착지를 고르면 꺾는 곳마다 근처 가게를 길잡이로 삼아 카드 초안을 만들어요.</p>
         <p className="label-medium muted">
@@ -267,6 +283,7 @@ export default function PlanPage() {
           </p>
         </div>
       </div>
+      <TabBar />
     </main>
   );
 }

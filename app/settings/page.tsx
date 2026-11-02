@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { TabBar } from "@/components/brand";
 import { useEffect, useState } from "react";
 import { AppBar, Icon, useConfirm } from "@/components/ui";
 import { makeBackup, restoreBackup } from "@/lib/backup";
@@ -229,8 +230,8 @@ export default function SettingsPage() {
   };
 
   return (
-    <main className="screen">
-      <AppBar title="설정" back="/" />
+    <main className="screen with-tabs">
+      <AppBar title="설정" />
       <div style={{ paddingBottom: 24 }}>
         <p className="section-label label-large">안내</p>
         <Row title="진동 안내" desc="다음 카드가 뜨면 진동해요">
@@ -294,6 +295,7 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+      <TabBar />
     </main>
   );
 }
