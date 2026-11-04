@@ -14,6 +14,7 @@ export const maxDuration = 60;
 // 카드 수에는 상한이 없다. 길이 길면 꺾는 곳이 많은 만큼 카드도 많아진다.
 // 대신 서버 시간 제한(60초) 안에 끝나게, AI는 20곳씩 나눠 동시에 부르고 시간이 모자라면 AI 없이 틀로 만든다.
 const AI_CHUNK = 20;
+const BUDGET_STORES_MS = 24_000; // 여기를 넘으면 남은 지점은 가게 찾기를 건너뛴다
 const BUDGET_AI_MS = 30_000; // 여기까지 가게 찾기가 끝나지 않았으면 AI를 건너뛴다
 const BUDGET_ADDR_MS = 48_000; // 여기를 넘으면 건물·번지 찾기를 건너뛴다
 
@@ -108,8 +109,10 @@ export async function POST(req: Request) {
       }
       let ranked: Spot[] = [];
       try {
+        // 시간이 모자라면 가게 찾기를 건너뛴다 (그 카드는 방향과 건물·번지로 안내)
+        if (Date.now() - t0 > BUDGET_STORES_MS) throw new Error("시간이 모자라 건너뜀");
         let list = await storesNear(at.lat, at.lng, 40);
-        if (list.length === 0) list = await storesNear(at.lat, at.lng, 80);
+        if (list.length === 0 && Date.now() - t0 < BUDGET_STORES_MS) list = await storesNear(at.lat, at.lng, 80);
         // 같은 이름을 하나로 줄인 뒤(rankForLandmark), 길가에 있고 걸어오며 보이는 순서로 다시 줄 세운다
         ranked = placeOnRoute(rankForLandmark(list, 40), p, route.track).slice(0, 6);
       } catch (e) {

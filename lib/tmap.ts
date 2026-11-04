@@ -156,7 +156,7 @@ export async function pedestrianRoute(start: { lat: number; lng: number }, end: 
 // 모양이 달라도 fullAddress에서 뽑을 수 있게 한다.
 export async function reverseGeocode(lat: number, lng: number): Promise<PlaceInfo | null> {
   const p = new URLSearchParams({ version: "1", lat: String(lat), lon: String(lng), coordType: "WGS84GEO", addressType: "A10", newAddressExtend: "Y" });
-  const res = await fetch(`${BASE}/geo/reversegeocoding?${p}`, { headers: { appKey: KEY!, Accept: "application/json" }, cache: "no-store" });
+  const res = await fetch(`${BASE}/geo/reversegeocoding?${p}`, { headers: { appKey: KEY!, Accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(5000) });
   if (res.status === 204) return null;
   if (!res.ok) throw new Error(`TMAP 주소 찾기 오류 ${res.status}`);
   const j = (await res.json()) as Json;
