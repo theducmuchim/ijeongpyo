@@ -20,7 +20,7 @@ export async function shrinkPhoto(file: Blob): Promise<Blob> {
   ctx.drawImage(bitmap, 0, 0, w, h);
   bitmap.close();
   return await new Promise<Blob>((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("사진 저장 실패"))), "image/jpeg", QUALITY),
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("사진을 저장하지 못했어요"))), "image/jpeg", QUALITY),
   );
 }
 

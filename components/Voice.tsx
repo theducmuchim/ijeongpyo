@@ -62,7 +62,7 @@ export function VoiceControl({ commands, onCommand, onOther, allowAlways, exampl
         heard: text,
         error: String((e as Error)?.message ?? e).slice(0, 120),
       });
-      toast("알아들었지만 하지 못했어요. 버튼을 눌러 주세요.");
+      toast("알아듣긴 했지만 실행하지 못했어요. 버튼을 직접 눌러 주세요.");
       return;
     }
     setDid("맞는 말이 없어요");
@@ -152,7 +152,7 @@ export function VoiceControl({ commands, onCommand, onOther, allowAlways, exampl
   return (
     <div className="voice-bar">
       <button className={`btn btn-tonal${state === "listening" ? " mic-on" : ""}`} onClick={once} disabled={state === "thinking"} aria-live="polite">
-        <Icon name="mic" size={20} /> {state === "listening" ? "듣는 중… 말을 마치면 멈춰요" : state === "thinking" ? "알아듣는 중…" : label}
+        <Icon name="mic" size={20} /> {state === "listening" ? "듣는 중… 말이 끝나면 멈춰요" : state === "thinking" ? "알아듣는 중…" : label}
       </button>
       <p className="label-medium muted voice-hint" aria-live="polite">
         {result}

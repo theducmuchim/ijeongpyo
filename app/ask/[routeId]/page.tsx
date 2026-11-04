@@ -41,7 +41,7 @@ export default function AskPage() {
   }
 
   const name = route?.destName;
-  const askText = `길을 잘 찾지 못해요. ${name ? josa(name, "으로/로") : "가려는 곳으로"} 가는 방향을 손으로 가리켜 주세요. 고맙습니다.`;
+  const askText = `제가 길을 잘 못 찾아요. ${name ? josa(name, "으로/로") : "가려는 곳으로"} 가는 방향을 손으로 가리켜 주세요. 고맙습니다.`;
   useScreenSpeech(route && !editing ? askText : null);
   if (route === undefined) return <main className="screen ask" />;
 
@@ -72,7 +72,7 @@ export default function AskPage() {
         </div>
       ) : (
         <div className="ask-card" role="note">
-          <p className="ask-lead">길을 잘 찾지 못해요.</p>
+          <p className="ask-lead">제가 길을 잘 못 찾아요.</p>
           <p className="ask-main">
             <b>{name ? josa(name, "으로/로") : "가려는 곳으로"}</b> 가는 방향을 손으로 가리켜 주세요.
           </p>

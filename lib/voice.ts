@@ -257,7 +257,7 @@ export function listenError(code: string): string {
   if (code === "no-speech") return "말소리가 들리지 않았어요. 버튼을 누르고 바로 말해 주세요.";
   if (code === "network") return "음성 인식에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.";
   if (code === "audio-capture") return "마이크 소리가 들어오지 않아요. 화면을 한 번 누르고 다시 해 주세요.";
-  if (code === "quota") return "오늘 말로 하기를 많이 써서 잠시 쉬어요. 버튼을 눌러 주세요.";
+  if (code === "quota") return "지금은 말로 하기를 쓸 수 없어요. 잠시 뒤 다시 하거나 버튼을 눌러 주세요.";
   return "말을 알아듣지 못했어요. 다시 말해 주세요.";
 }
 
@@ -319,7 +319,7 @@ async function listenOnceInner(opts: ListenOpts): Promise<string[]> {
     }
   }
   lastHow = "녹음";
-  if (!canRecord()) throw new Error("이 브라우저에서는 말로 하기를 쓸 수 없어요. 직접 눌러 주세요.");
+  if (!canRecord()) throw new Error("이 브라우저에서는 말로 하기를 쓸 수 없어요. 버튼을 직접 눌러 주세요.");
   opts.onPhase?.("listening");
   let wav: string;
   try {

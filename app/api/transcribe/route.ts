@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   if (!wav || wav.length > MAX_B64) return Response.json({ error: "녹음이 비었거나 너무 길어요. 짧게 다시 말해 주세요." }, { status: 400 });
   if (isMockMode()) return Response.json({ text: "다음", mock: true });
   if (!(await checkLimit(req.headers.get("x-device-id"), "voice"))) {
-    return Response.json({ error: "오늘 말로 하기를 많이 써서 잠시 쉬어요. 버튼을 눌러 주세요." }, { status: 429 });
+    return Response.json({ error: "지금은 말로 하기를 쓸 수 없어요. 잠시 뒤 다시 하거나 버튼을 눌러 주세요." }, { status: 429 });
   }
   try {
     const hints = (Array.isArray(body.hints) ? body.hints : []).filter((h) => typeof h === "string").slice(0, 40);

@@ -37,7 +37,7 @@ export default function Home() {
       ? null
       : routes.length
         ? `저장한 길이 ${routes.length}개 있어요. 걸을 길을 고르거나, 마이크를 누르고 길 이름이나 가려는 곳을 말해 주세요.`
-        : "아직 저장한 길이 없어요. '새 길 등록'이나 '처음 가는 길'에서 길을 만들어요.",
+        : "아직 저장한 길이 없어요. '새 길 등록'이나 '처음 가는 길'에서 새 길을 만들 수 있어요.",
   );
 
   // 말한 내용이 저장한 길 이름이면 그 길을 걷고, 아니면 처음 가는 길에서 도착지로 찾는다
@@ -69,7 +69,7 @@ export default function Home() {
           </Link>
           <div className="hero-title">
             <p className="hero-name">이정표</p>
-            <p className="hero-sub">눈에 보이는 길잡이로 걷는 길안내</p>
+            <p className="hero-sub">눈에 보이는 간판을 따라 걷는 길안내</p>
           </div>
         </div>
         <HeroArt />
@@ -132,7 +132,7 @@ export default function Home() {
               <LineIcon name="sparkle" />
               <span>
                 <b>먼저 체험하기</b>
-                <small>예시 사진으로 2분이면 돼요</small>
+                <small>예시 길로 2분이면 다 볼 수 있어요</small>
               </span>
             </Link>
           )}
@@ -140,24 +140,24 @@ export default function Home() {
 
         <section className="sheet-sec">
           <h2 className="sec-title">길 만들기</h2>
-          <p className="sec-sub">자주 가는 길은 같이 걸으며, 처음 가는 길은 도착지만 골라요</p>
+          <p className="sec-sub">자주 다니는 길은 한 번 같이 걸으며 만들고, 처음 가는 길은 도착지만 고르면 돼요</p>
 
           <Link href="/record" className="big-card pressable" style={{ background: "var(--mint)" }}>
             <CornerBlob color="var(--forest)" className="big" />
             <span className="big-title">새 길 등록</span>
-            <span className="big-desc">보호자와 한 번 같이 걸으며 갈림길마다 사진을 찍어요</span>
+            <span className="big-desc">보호자와 한 번 같이 걸으면서 갈림길마다 사진을 찍어 둬요</span>
             <span className="big-meta">
               <LineIcon name="pin" size={16} /> 갈림길 사진 + 메모
             </span>
             <span className="big-meta">
-              <LineIcon name="cards" size={16} /> AI가 안내 카드로 정리
+              <LineIcon name="cards" size={16} /> AI가 사진을 안내 카드로 정리
             </span>
           </Link>
 
           <Link href="/plan" className="big-card pressable" style={{ background: "var(--violet)" }}>
             <CornerBlob color="var(--navy)" className="big" />
             <span className="big-title">처음 가는 길</span>
-            <span className="big-desc">도착지만 고르면 꺾는 곳마다 가게를 길잡이로 카드 초안을 만들어요</span>
+            <span className="big-desc">도착지만 고르면 꺾는 곳마다 근처 가게를 길잡이로 삼아 카드를 만들어 줘요</span>
             <span className="big-meta">
               <LineIcon name="route" size={16} /> 출발지는 지금 위치
             </span>
@@ -172,7 +172,7 @@ export default function Home() {
                 <LineIcon name="sparkle" />
               </span>
               <span className="title-medium">체험하기</span>
-              <span className="body-medium muted">예시 사진으로 2분</span>
+              <span className="body-medium muted">예시 길로 2분</span>
             </Link>
             <Link href="/guide" className="pressable">
               <span className="avatar" style={{ background: "var(--primary-container)", color: "var(--primary)" }}>
@@ -185,7 +185,7 @@ export default function Home() {
           <Link href="/about" className="info-row pressable">
             <span>
               <b>자주 길을 잃나요?</b>
-              <small>익숙한 길에서도 방향을 잃는 발달성 지형적 방향감각 상실증(DTD)</small>
+              <small>익숙한 길에서도 방향을 잃는 발달성 지형적 방향감각 상실증(DTD)에 대해 알아봐요</small>
             </span>
             <LineIcon name="chevron" />
           </Link>

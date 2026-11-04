@@ -122,7 +122,7 @@ export async function synthesize(text: string, voice = TTS_VOICE): Promise<{ pcm
       });
       const part = res.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
       const data = part?.inlineData?.data;
-      if (!data) throw new Error("소리가 오지 않았어요");
+      if (!data) throw new Error("말소리가 들어오지 않았어요");
       const rate = Number(/rate=(\d+)/.exec(part?.inlineData?.mimeType ?? "")?.[1] ?? 24000);
       aiTrace.push({ model, ms: Date.now() - t, ok: true });
       ttsModel = model;

@@ -86,10 +86,10 @@ function ShotBox({ i, card, shot, onPick, onRemove }: { i: number; card: PlanCar
             <p className="body-medium">
               {r.seen && name ? `사진에 ${josa(name, "이/가")} 보여요` : name ? `사진에서 ${josa(name, "을/를")} 못 찾았어요. 대신 ${josa(r.landmark.name, "을/를")} 길잡이로 써요` : `${josa(r.landmark.name, "을/를")} 길잡이로 써요`}
             </p>
-            <p className="label-medium">저장하면: {r.instruction}</p>
+            <p className="label-medium">카드 문장: {r.instruction}</p>
           </>
         ) : (
-          <p className="body-medium">사진만 넣어 둘게요. 문장은 그대로예요.</p>
+          <p className="body-medium">사진만 넣어 두고, 카드 문장은 그대로 둬요.</p>
         )}
         <button className="btn btn-text label-large" style={{ padding: 0, minHeight: 32, width: "auto", alignSelf: "flex-start" }} onClick={onRemove}>
           사진 빼기
@@ -348,7 +348,7 @@ export default function PlanPage() {
       <main className="screen">
         <AppBar title="처음 가는 길" />
         <div className="body">
-          <AiWaiting title="지금 위치 확인 중" hint="출발지를 정확히 잡고 있어요. 몇 초 걸려요" stepMs={2500} steps={["GPS 받는 중", "위치 맞추는 중"]} />
+          <AiWaiting title="지금 위치 확인 중" hint="출발할 자리를 정확히 잡느라 몇 초 걸려요" stepMs={2500} steps={["위치 받는 중", "더 정확한 위치 기다리는 중"]} />
         </div>
       </main>
     );
@@ -394,9 +394,9 @@ export default function PlanPage() {
             <div className="banner body-medium" role="status" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <span>
                 {startFix.accuracy < 0
-                  ? "지금 위치를 새로 잡지 못해서 조금 전 위치로 만들었어요."
-                  : `위치가 정확하지 않아요(오차 약 ${startFix.accuracy}m). 출발 카드가 실제 자리와 다를 수 있어요.`}{" "}
-                밖으로 나가 잠시 기다린 뒤 다시 잡아 주세요.
+                  ? "지금 위치를 새로 잡지 못해서, 조금 전에 잡힌 위치로 만들었어요."
+                  : `위치가 정확하지 않아요(오차 약 ${startFix.accuracy}m). 출발 카드가 실제로 서 있는 곳과 다를 수 있어요.`}{" "}
+                건물 밖으로 나가 잠깐 기다렸다가 다시 만들어 주세요.
               </span>
               <button className="btn btn-tonal" style={{ alignSelf: "flex-start" }} onClick={() => makePlan(target)}>
                 <Icon name="flag" size={18} /> 지금 위치로 다시 만들기
@@ -404,11 +404,11 @@ export default function PlanPage() {
             </div>
           )}
           <p className="body-medium muted">
-            아직 사진이 없는 카드예요. 로드뷰로 그 자리를 미리 보고, 사진이 있으면 올려 주세요. 없으면 걸으면서 채워요.
+            아직 사진이 없는 카드예요. 로드뷰로 그 자리를 미리 볼 수 있고, 갖고 있는 사진이 있으면 올려도 돼요. 없으면 걸으면서 찍으면 돼요.
           </p>
           {Object.keys(shots).length > 0 && (
             <p className="chip label-medium">
-              사진 {Object.keys(shots).length}/{plan.cards.length}장 넣음
+              사진 {Object.keys(shots).length}/{plan.cards.length}장 넣었어요
             </p>
           )}
           <div className="timeline stagger">
@@ -475,11 +475,11 @@ export default function PlanPage() {
     <main className="screen with-tabs">
       <AppBar title="처음 가는 길" />
       <div className="body">
-        <p className="body-large">도착지를 고르면 꺾는 곳마다 근처 가게를 길잡이로 삼아 카드 초안을 만들어요.</p>
+        <p className="body-large">도착지를 고르면, 꺾는 곳마다 근처 가게를 길잡이로 삼아 안내 카드를 만들어 줘요.</p>
         {gps === "ask" || gps === "denied" ? (
           <div className="surface-card tonal-card" style={{ gap: 8 }}>
             <p className="body-medium">
-              {gps === "ask" ? "출발지는 지금 위치예요. 지금 위치를 알려면 위치 권한이 필요해요." : "위치를 쓸 수 없어서 출발지를 알 수 없어요."}
+              {gps === "ask" ? "지금 서 있는 곳에서 출발하기 때문에 위치 권한이 필요해요." : "위치를 쓸 수 없어서 어디서 출발하는지 알 수 없어요."}
             </p>
             <button className="btn btn-filled" onClick={askLocation}>
               <Icon name="flag" size={18} /> 위치 허용하기
@@ -536,8 +536,8 @@ export default function PlanPage() {
         <div className="surface-card" style={{ marginTop: 8 }}>
           <p className="title-medium">처음 가는 길은 이렇게 걸어요</p>
           <p className="body-medium muted">
-            카드는 지도 데이터로 만든 초안이라 사진이 없어요. 갈림길에 가까워지면 &ldquo;○○이 보이나요?&rdquo;라고 물어요. 보이면 사진을 찍고,
-            안 보이면 다른 가게로 바꿔요. 다 걸으면 다음부터 익숙한 길처럼 사진 카드로 걸어요.
+            카드는 지도 정보로 만들어서 처음에는 사진이 없어요. 갈림길에 가까워지면 &ldquo;○○이 보이나요?&rdquo;라고 물어보는데, 보이면
+            사진을 찍고 안 보이면 다른 가게로 바꿔 주세요. 한 번 다 걸으면 다음부터는 사진이 있는 카드로 걸을 수 있어요.
           </p>
         </div>
       </div>

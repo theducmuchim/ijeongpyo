@@ -73,7 +73,7 @@ export const DEMO_LOST: { photo: string; lastCard: number; result: WhereAmIResul
     confidence: 0.74,
     seenLandmarks: ["파란 간판 '구제나라'", "버스 정류장", "앞쪽 유리 고층 건물"],
     matchedCardOrder: 3,
-    nextStep: "이 큰길을 따라 곧장 가세요. 지하철 입구가 나오면 3번 카드대로 오른쪽으로 가요",
+    nextStep: "이 큰길을 따라 곧장 가세요. 지하철 입구가 나오면 3번 카드대로 오른쪽으로 가세요",
     askPhoto: null,
     reasonForUser: "2번 카드 횡단보도를 건넌 뒤의 큰길이에요. 앞쪽에 대전역 근처 고층 건물이 보여요",
   },

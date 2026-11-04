@@ -148,7 +148,7 @@ export default function Intro() {
                 앱 열기
               </Link>
               <Link href="/demo" className={s.btnLine}>
-                2분 체험하기
+                체험하기
               </Link>
             </div>
           </div>
@@ -179,13 +179,13 @@ export default function Intro() {
             <div>
               <b>익숙한 길에서도 길을 잃어요</b>
               <p>
-                발달성 지형적 방향감각 상실증(DTD)이라고 해요. 다친 적도 없는데 머릿속에 길 지도가 잘 안 그려져요. 2009년 캐나다 연구팀이
+                발달성 지형적 방향감각 상실증(DTD)이라고 해요. 다친 적도 없는데 머릿속에 길 지도가 잘 그려지지 않아요. 2009년 캐나다 연구팀이
                 처음 보고했어요.
               </p>
             </div>
             <div>
               <b>내비만 따라가면 길이 안 남아요</b>
-              <p>GPS를 많이 쓰는 사람일수록 혼자 걸을 때 공간 기억이 나빴다는 연구가 있어요(Dahmani &amp; Bohbot, 2020).</p>
+              <p>평소 GPS 길안내를 많이 쓰는 사람일수록, 혼자 길을 찾을 때 공간을 기억하는 힘이 약했다는 연구가 있어요(Dahmani &amp; Bohbot, 2020).</p>
             </div>
           </div>
           <Link href="/about" className={s.textLink}>
@@ -202,7 +202,7 @@ export default function Intro() {
               <div className={s.cap}>
                 <span>01</span>
                 <b>같이 한 번 걸으며 등록</b>
-                <p>보호자나 친구와 걸으면서 갈림길마다 사진을 찍고 메모를 남겨요. AI가 안내 카드로 정리해요.</p>
+                <p>보호자나 친구와 걸으면서 갈림길마다 사진을 찍고 메모를 남기면, AI가 안내 카드로 정리해 줘요.</p>
               </div>
             </article>
             <article className={`${s.tile} ${s.tBrown}`}>
@@ -254,7 +254,7 @@ export default function Intro() {
             <article className={`${s.feat} ${s.fBlue}`}>
               <h3>처음 가는 길</h3>
               <p>
-                도착지만 고르면 꺾는 곳마다 근처 가게를 길잡이로 카드 초안을 만들어요. 출발 전에 로드뷰로 그 자리를 미리 둘러볼 수 있어요.
+                도착지만 고르면 꺾는 곳마다 근처 가게를 길잡이로 삼아 카드를 만들어 줘요. 출발하기 전에 로드뷰로 그 자리를 미리 둘러볼 수도 있어요.
               </p>
               <Link href="/plan">도착지 골라 보기 →</Link>
             </article>
@@ -265,7 +265,7 @@ export default function Intro() {
             </article>
             <article className={`${s.feat} ${s.fYellow}`}>
               <h3>걸을수록 줄어드는 안내</h3>
-              <p>같은 길을 세 번 잘 도착하면 안내를 한 단계 줄일지 물어요. 사진과 문장, 문장만, 꺾는 곳에서만 진동 순서예요.</p>
+              <p>같은 길을 세 번 헤매지 않고 도착하면, 안내를 한 단계 줄일지 물어봐요. &lsquo;사진과 문장&rsquo;에서 &lsquo;문장만&rsquo;, 다시 &lsquo;꺾는 곳에서만 진동&rsquo;으로 줄어요.</p>
               <Link href="/guide#practice">연습 모드 보기 →</Link>
             </article>
             <article className={`${s.feat} ${s.fBrown}`}>
@@ -279,7 +279,7 @@ export default function Intro() {
             <Phone src="/intro/app-ask.png" alt="도움 요청 화면: 큰 글씨로 방향을 묻는 문장" />
           </div>
           <p className={s.note}>
-            길잡이를 넣은 안내를 들은 사람이 길을 더 잘, 3주 뒤에도 기억했다는 연구(Wunderlich 외, 2022)를 바탕으로 설계했어요. 이정표는
+            길잡이를 넣어 안내를 받은 사람이 길을 더 잘 기억했고, 3주 뒤에도 기억했다는 연구(Wunderlich 외, 2022)를 바탕으로 만들었어요. 이정표는
             진단이나 치료를 하지 않아요.
           </p>
         </section>
@@ -287,7 +287,7 @@ export default function Intro() {
         {/* 6. 초록 줄무늬 띠: 체험으로 이어지기 */}
         <section className={s.stripes}>
           <Link href="/demo" className={s.stripePill}>
-            예시 사진으로 2분 체험하기
+            예시 길로 체험하기
           </Link>
         </section>
 

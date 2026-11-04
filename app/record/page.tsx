@@ -189,7 +189,7 @@ export default function RecordPage() {
         {permDialog}
         <div className="body">
           <p className="body-large">
-            보호자나 친구와 같이 걸으면서 등록해요. 갈림길마다 사진 한 장과 짧은 메모를 남기면 AI가 안내 카드로 만들어요.
+            보호자나 친구와 같이 걸으면서 등록해요. 갈림길마다 사진 한 장과 짧은 메모를 남기면, AI가 그걸로 안내 카드를 만들어 줘요.
           </p>
           <label className="label-large" htmlFor="route-name">
             길 이름
@@ -205,8 +205,8 @@ export default function RecordPage() {
             <div className="surface-card">
               <p className="title-medium">사진은 구글 AI로 보내져요</p>
               <p className="body-medium muted">
-                카드를 만들 때 사진을 구글 Gemini로 보내요. 얼굴, 집 주소, 문패가 찍히지 않게 해 주세요. 사진과 길 기록은 이
-                휴대폰에만 저장돼요.
+                카드를 만들 때 사진을 구글 Gemini로 보내요. 그러니 사람 얼굴이나 집 주소, 문패는 찍히지 않게 해 주세요. 사진과
+                길 기록은 이 휴대폰에만 저장돼요.
               </p>
               <button
                 className="btn btn-text label-large"
@@ -234,7 +234,7 @@ export default function RecordPage() {
         <div className="body">
           <AiWaiting
             title={progress ? `안내 카드 만드는 중 · ${progress}` : "안내 카드 만드는 중"}
-            hint={junctions.length > 8 ? "갈림길이 많아서 나눠 보내요. 1분쯤 걸릴 수 있어요. 화면을 끄지 마세요." : "10~30초 걸려요. 화면을 끄지 마세요."}
+            hint={junctions.length > 8 ? "갈림길이 많아서 나눠 보내고 있어요. 1분쯤 걸릴 수 있으니 화면을 켜 두세요." : "10~30초쯤 걸려요. 그동안 화면을 켜 두세요."}
             photoId={junctions.at(-1)?.photoId}
             steps={[
               `사진 ${junctions.length}장 보내는 중`,
@@ -262,7 +262,7 @@ export default function RecordPage() {
                 <Icon name="camera" size={36} />
               </span>
               <span className="body-large">눌러서 사진 찍기</span>
-              <span className="body-medium">간판이 보이게, 사람이 적은 쪽으로 찍어 주세요</span>
+              <span className="body-medium">사람은 적게, 간판은 잘 보이게 찍어 주세요</span>
             </span>
           )}
         </label>

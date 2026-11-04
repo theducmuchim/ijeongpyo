@@ -56,7 +56,7 @@ export default function RoutesPage() {
     const cards = names.reduce((n, r) => n + r.cards.length, 0);
     const ok = await ask({
       title: one ? `${josa(one.name, "을/를")} 지울까요?` : `길 ${names.length}개를 지울까요?`,
-      body: `카드 ${cards}장과 사진이 휴대폰에서 지워져요. 지운 바로 뒤에는 '되돌리기'로 살릴 수 있어요.`,
+      body: `카드 ${cards}장과 사진이 이 휴대폰에서 지워져요. 잘못 지웠다면 바로 뜨는 '되돌리기'를 눌러 주세요.`,
       ok: "지우기",
       danger: true,
     });
@@ -151,7 +151,7 @@ export default function RoutesPage() {
 
         <p className="label-large muted" aria-live="polite">
           {routes === null ? "불러오는 중…" : !total ? "아직 저장한 길이 없어요" : q.trim() ? `${total}개 중 ${hits.length}개` : `저장한 길 ${total}개`}
-          {selecting && ` · ${picked.size}개 고름`}
+          {selecting && ` · ${picked.size}개 골랐어요`}
         </p>
 
         {selecting && hits.length > 0 && (
@@ -205,7 +205,7 @@ export default function RoutesPage() {
 
         {routes !== null && total > 0 && hits.length === 0 && (
           <div className="surface-card" style={{ gap: 8 }}>
-            <p className="body-large">찾는 길이 없어요: &lsquo;{q.trim()}&rsquo;</p>
+            <p className="body-large">&lsquo;{q.trim()}&rsquo;{josa(q.trim(), "으로/로").slice(q.trim().length)} 찾은 길이 없어요.</p>
             <p className="body-medium muted">길 이름 말고 길잡이 가게나 도착지 이름으로도 찾을 수 있어요.</p>
             <button className="btn btn-tonal" style={{ alignSelf: "flex-start" }} onClick={() => setQ("")}>
               모두 보기
@@ -218,7 +218,7 @@ export default function RoutesPage() {
             <LineIcon name="sparkle" />
             <span>
               <b>먼저 체험하기</b>
-              <small>예시 사진으로 2분이면 돼요</small>
+              <small>예시 길로 2분이면 다 볼 수 있어요</small>
             </span>
           </Link>
         )}

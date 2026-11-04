@@ -20,7 +20,7 @@ export default function AboutPage() {
           <p className="title-medium">이정표가 하는 일</p>
           <p className="body-medium muted">
             지도 대신 &ldquo;꽃집을 오른쪽에 두고 골목으로 들어가세요&rdquo;처럼 눈에 보이는 길잡이로 안내해요. 길을 잃으면 주변
-            사진으로 지금 위치를 찾아요.
+            사진을 찍어서 지금 어디쯤인지 찾아 줘요.
           </p>
         </div>
         <div className="surface-card tonal-card">

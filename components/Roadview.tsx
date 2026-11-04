@@ -202,7 +202,7 @@ export function Roadview({ lat, lng, heading, target }: { lat: number; lng: numb
         </div>
       )}
       <p className="label-medium muted" style={{ marginTop: 6 }}>
-        {target ? "노란 이름표가 붙은 곳이 길잡이 가게 자리예요. " : ""}거리 사진이 뜨기까지 10초쯤 걸릴 수 있어요. 찍은 지 오래돼서 가게가 바뀌었을 수도 있어요.
+        {target ? "노란 이름표가 붙은 곳이 길잡이 가게예요. " : ""}거리 사진이 뜨기까지 10초쯤 걸릴 수 있고, 찍은 지 오래된 사진이라 가게가 바뀌었을 수도 있어요.
       </p>
     </div>
   );

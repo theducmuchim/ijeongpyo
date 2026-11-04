@@ -19,7 +19,7 @@ export function freshFix(maxMs = 8000): Promise<Fix> {
       navigator.geolocation.clearWatch(id);
       clearTimeout(timer);
       if (best) resolve(best);
-      else reject(new Error("지금 위치를 찾지 못했어요. 위치 권한과 GPS를 확인해 주세요."));
+      else reject(new Error("지금 위치를 찾지 못했어요. 위치 권한이 켜져 있는지 확인해 주세요."));
     };
     const id = navigator.geolocation.watchPosition(
       (p) => {

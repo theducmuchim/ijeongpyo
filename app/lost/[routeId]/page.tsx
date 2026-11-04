@@ -63,7 +63,7 @@ export default function LostPage() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
-  useScreenSpeech(route ? "주변 사진을 찍으면 지금 위치를 찾아요. 간판이나 출구 번호가 보이게 찍어 주세요. 지금 보이는 것을 말로 설명해도 돼요." : null);
+  useScreenSpeech(route ? "주변 사진을 찍으면 지금 어디쯤인지 찾아 줘요. 간판이나 출구 번호가 보이게 찍어 주세요. 보이는 것을 말로 설명해도 돼요." : null);
 
   async function onPhoto(file: File) {
     if (!route) return;
@@ -87,8 +87,8 @@ export default function LostPage() {
   // 결과를 소리로도 들려준다
   function speakResult(res: WhereAmIResult, tries: number) {
     if (res.confidence >= 0.6 && !res.askPhoto) speak(`${res.reasonForUser} ${res.nextStep}`);
-    else if (tries >= MAX_TRIES) speak("세 번 찍어도 위치를 찾지 못했어요. 화면에 마지막으로 지나간 곳 사진이 있어요. 그곳으로 돌아가 주세요.");
-    else speak(`${res.askPhoto ?? "다른 방향도 한 장 찍어 주세요."} 사진만으로는 확실하지 않아요.`);
+    else if (tries >= MAX_TRIES) speak("세 번 찍어도 어디인지 찾지 못했어요. 화면에 마지막으로 지나간 곳 사진을 띄웠으니, 그곳으로 돌아가 주세요.");
+    else speak(`사진만으로는 확실하지 않아요. ${res.askPhoto ?? "다른 방향도 한 장 찍어 주세요."}`);
   }
 
   async function locate(all: ImagePayload[], saidText: string) {
@@ -204,7 +204,7 @@ export default function LostPage() {
     <main className="screen">
       <AppBar title="길 찾기" back={`/walk/${route.id}`} />
       <div className="body">
-        <p className="title-large">주변 사진을 찍으면 지금 위치를 찾아요.</p>
+        <p className="title-large">주변 사진을 찍으면 지금 어디쯤인지 찾아 줘요.</p>
         <MockBadge show={result?.mock} />
         <CameraInput id="lost-photo" onPick={onPhoto} />
 
@@ -237,7 +237,7 @@ export default function LostPage() {
             </div>
             <div className="text">
               <p className="label-medium muted">사진에서 찾은 것</p>
-              <p className="body-large">{result.seenLandmarks.length ? result.seenLandmarks.join(", ") : "알아볼 만한 간판이 없어요"}</p>
+              <p className="body-large">{result.seenLandmarks.length ? result.seenLandmarks.join(", ") : "알아볼 수 있는 간판이 없어요"}</p>
             </div>
           </div>
         )}

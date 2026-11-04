@@ -82,8 +82,8 @@ function RecordStep() {
         title="같이 걸으며 등록해요"
         tips={["간판이나 건물 이름이 보이게", "사람과 차는 피해서", "메모는 말로 남겨도 돼요"]}
       >
-        보호자나 친구와 한 번 같이 걸어요. 갈림길에 서면 사진을 한 장 찍고, &ldquo;꽃집에서 왼쪽&rdquo;처럼 짧게 메모한 뒤
-        &lsquo;여기서 꺾어요&rsquo;를 눌러요. 지금은 사진 4장이 저절로 들어가요.
+        보호자나 친구와 한 번 같이 걸어요. 갈림길에 서면 사진을 한 장 찍고, &ldquo;약국 앞에서 건너기&rdquo;처럼 짧게 메모한
+        다음 &lsquo;여기서 꺾어요&rsquo;를 눌러요. 체험에서는 사진 4장이 저절로 들어가요.
       </Coach>
       <Preview title="새 길 등록">
         <div key={n} className="pop">
@@ -143,15 +143,15 @@ function AiStep({ cards, setCards, real, setReal }: { cards: CardDraft[]; setCar
   return (
     <>
       <Coach title="AI가 안내 카드를 만들어요">
-        &lsquo;도착했어요&rsquo;를 누르면 사진과 메모를 한 번에 구글 AI로 보내요. AI는 오래 남는 간판이나 건물을 길잡이로 고르고,
-        사진마다 설명을 적어 둬요. 이 설명은 나중에 길을 잃었을 때 지금 사진과 비교하는 데 써요.
+        &lsquo;도착했어요&rsquo;를 누르면 사진과 메모를 한 번에 구글 AI로 보내요. AI는 오래 그 자리에 있을 간판이나 건물을 길잡이로
+        고르고, 사진마다 설명을 적어 둬요. 이 설명은 나중에 길을 잃었을 때 새로 찍은 사진과 비교하는 데 써요.
       </Coach>
       <Preview title="새 길 등록">
         {phase !== "done" ? (
           <AiWaiting
             key={phase}
             title={phase === "real-wait" ? "진짜 AI가 만드는 중" : "안내 카드 만드는 중"}
-            hint="10~30초 걸려요. 화면을 끄지 마세요."
+            hint="10~30초쯤 걸려요. 그동안 화면을 켜 두세요."
             photoUrl={DEMO_JUNCTIONS[3].photo}
             stepMs={1300}
             steps={["사진 4장 보내는 중", "간판과 건물 찾는 중", "길잡이 고르는 중", "안내 문장 쓰는 중"]}
@@ -168,7 +168,7 @@ function AiStep({ cards, setCards, real, setReal }: { cards: CardDraft[]; setCar
       {phase === "done" && !real && (
         <div className="surface-card">
           <p className="title-medium">진짜 AI로 해 보기</p>
-          <p className="body-medium muted">같은 사진 4장을 실제로 AI에 보내 카드를 만들어요.</p>
+          <p className="body-medium muted">같은 사진 4장을 실제 AI에 보내서 카드를 만들어 봐요.</p>
           <button className="btn btn-outlined" style={{ marginTop: 8 }} onClick={tryReal}>
             <Icon name="sparkle" size={18} /> 진짜 AI로 만들어 보기
           </button>
@@ -232,8 +232,8 @@ function WalkStep({ cards }: { cards: CardDraft[] }) {
   return (
     <>
       <Coach title="카드를 보며 혼자 걸어요" tips={["30m 안에 들어가면 저절로 넘어가요", "넘어갈 때 진동하고 문장을 읽어 줘요", "걷는 동안 화면이 꺼지지 않아요"]}>
-        카드 한 장이 갈림길 하나예요. 지도 대신 사진과 문장만 봐요. 건물 사이처럼 위치가 잘 안 잡히면 &lsquo;다음 카드&rsquo;를 직접
-        눌러요.
+        카드 한 장이 갈림길 하나예요. 지도는 보지 않고 사진과 문장만 따라가면 돼요. 건물 사이처럼 위치가 잘 안 잡히는 곳에서는
+        &lsquo;다음 카드&rsquo;를 직접 눌러요.
       </Coach>
       <Preview title={DEMO_ROUTE_NAME}>
         <div className="progress">
@@ -274,8 +274,8 @@ function FixStep({ cards }: { cards: CardDraft[] }) {
   return (
     <>
       <Coach title="길잡이가 바뀌었을 때">
-        가게가 바뀌어 길잡이가 안 보이면 걷기 화면의 &lsquo;길잡이가 안 보여요&rsquo;를 누르고 그 자리를 다시 찍어요. AI가 새 길잡이를
-        고르고, 전과 후를 보고 확인해야 바뀌어요. 꺾는 방향은 그대로예요.
+        가게가 바뀌어서 길잡이가 안 보이면, 걷기 화면에서 &lsquo;길잡이가 안 보여요&rsquo;를 누르고 그 자리를 다시 찍어요. AI가 새
+        길잡이를 골라 주고, 전과 후 사진을 비교해 본 뒤에 바꿔요. 꺾는 방향은 그대로예요.
       </Coach>
       <Preview title="1번 길잡이 바꾸기">
         {!show ? (
@@ -321,8 +321,8 @@ function LostStep() {
   return (
     <>
       <Coach title="길을 잃었을 때" tips={["확실하지 않으면 다른 방향을 더 찍어 달라고 해요", "세 번 찍어도 모르면 마지막으로 지나간 곳 사진을 보여 줘요", "설정에서 켜 두면 보호자에게 위치를 보낼 수 있어요"]}>
-        &lsquo;길을 잃었어요&rsquo;를 누르고 간판이나 출구 번호가 보이게 찍어요. AI가 등록할 때 적어 둔 카드 설명과 비교해서 어느
-        카드 근처인지, 다음에 뭘 하면 되는지 알려 줘요.
+        &lsquo;길을 잃었어요&rsquo;를 누르고 간판이나 출구 번호가 보이게 찍어요. AI가 등록할 때 적어 둔 카드 설명과 비교해서, 지금 어느
+        카드 근처인지와 다음에 할 일을 알려 줘요.
       </Coach>
       <Preview title="길 찾기">
         {!show ? (
@@ -423,11 +423,11 @@ export default function DemoPage() {
                   <path d="M38 62 L54 77 L84 45" />
                 </svg>
                 <p className="headline-small">체험이 끝났어요</p>
-                <p className="body-large muted">마지막 카드에서 &lsquo;도착했어요&rsquo;를 누르면 걸린 시간을 보여 주고, 돌아오는 길도 등록하자고 알려 줘요.</p>
+                <p className="body-large muted">실제로 걸을 때는 마지막 카드에서 &lsquo;도착했어요&rsquo;를 누르면 걸린 시간이 나오고, 돌아오는 길도 이어서 등록할 수 있어요.</p>
               </div>
               <div className="surface-card">
                 <p className="title-medium">실제 화면으로 걸어 보기</p>
-                <p className="body-medium muted">체험용 길을 저장하면 진짜 걷기 화면에서 카드를 넘기고, 길잡이 바꾸기와 길을 잃었어요를 직접 눌러 볼 수 있어요. 홈에서 지울 수 있어요.</p>
+                <p className="body-medium muted">체험용 길을 저장하면 실제 걷기 화면에서 카드를 넘겨 보고, &lsquo;길잡이가 안 보여요&rsquo;와 &lsquo;길을 잃었어요&rsquo;도 직접 눌러 볼 수 있어요. 다 보고 나면 &lsquo;내 길&rsquo;에서 지우면 돼요.</p>
               </div>
               <button className="btn btn-filled btn-large" onClick={saveAndWalk} disabled={saving}>
                 <Icon name="walk" size={26} /> {saving ? "저장하는 중…" : "체험용 길 걸어 보기"}

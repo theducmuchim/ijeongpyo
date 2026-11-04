@@ -171,7 +171,7 @@ function Arrived({ route, startedAt, offCount, clean }: { route: Route; startedA
         </div>
         {r.kind === "planned" && (
           <p className="body-medium muted">
-            {drafts === 0 ? "모든 카드에 사진이 들어갔어요. 다음부터 익숙한 길로 걸어요." : `사진이 없는 카드가 ${drafts}장 남았어요. 다음에 걸을 때 채우면 돼요.`}
+            {drafts === 0 ? "모든 카드에 사진이 들어갔어요. 다음부터는 사진을 보며 걸을 수 있어요." : `사진이 없는 카드가 ${drafts}장 남았어요. 다음에 걸을 때 채우면 돼요.`}
           </p>
         )}
         {clean && <Quiz route={r} />}
@@ -179,7 +179,7 @@ function Arrived({ route, startedAt, offCount, clean }: { route: Route; startedA
           <div className="surface-card tonal-card" style={{ width: "100%", textAlign: "left" }}>
             <p className="title-medium">길을 잃지 않고 {CLEAN_TO_LEVEL_UP}번 도착했어요</p>
             <p className="body-medium">
-              다음부터 &lsquo;{LEVEL_TEXT[(level + 1) as PracticeLevel]}&rsquo;로 걸을 수 있어요. 길이 헷갈리면 언제든 전부 보기로 돌아가요.
+              다음부터는 &lsquo;{LEVEL_TEXT[(level + 1) as PracticeLevel]}&rsquo;로 걸을 수 있어요. 길이 헷갈리면 언제든 다시 전부 보기로 바꾸면 돼요.
             </p>
             <button className="btn btn-filled" style={{ marginTop: 8 }} onClick={levelUp}>
               다음부터 {LEVEL_TEXT[(level + 1) as PracticeLevel]}
@@ -291,7 +291,7 @@ function DraftPanel({ route, index, onChange }: { route: Route; index: number; o
         <>
           <p className="title-medium">사진에서 {josa(name, "을/를")} 찾지 못했어요</p>
           <p className="body-medium muted">
-            대신 보이는 것: {miss.result.landmark.name}. 이걸 길잡이로 쓰면 &ldquo;{miss.result.instruction}&rdquo;가 돼요.
+            대신 {josa(miss.result.landmark.name, "이/가")} 보여요. 이걸 길잡이로 쓰면 카드 문장이 &ldquo;{miss.result.instruction}&rdquo;로 바뀌어요.
           </p>
           <button className="btn btn-filled" onClick={acceptMiss}>
             이걸로 바꾸기
@@ -305,7 +305,7 @@ function DraftPanel({ route, index, onChange }: { route: Route; index: number; o
           <p className="label-medium muted">사진이 아직 없는 카드예요</p>
           <p className="draft-name">{name}</p>
           <p className="body-medium muted">
-            {[cand?.category, cand?.floor ? `${cand.floor}층` : null].filter(Boolean).join(" · ") || "지도 데이터에서 고른 길잡이"}
+            {[cand?.category, cand?.floor ? `${cand.floor}층` : null].filter(Boolean).join(" · ") || "지도에서 고른 길잡이"}
           </p>
           <PlaceLine place={card.place} />
           <p className="title-medium" style={{ marginTop: 8 }}>
@@ -319,12 +319,12 @@ function DraftPanel({ route, index, onChange }: { route: Route; index: number; o
               <Icon name="camera" size={18} /> 보여요
             </label>
           </div>
-          <p className="label-medium muted">&lsquo;보여요&rsquo;를 누르면 사진을 한 장 찍어요. 다음에는 이 사진으로 안내해요.</p>
+          <p className="label-medium muted">&lsquo;보여요&rsquo;를 누르고 사진을 한 장 찍어 두면, 다음부터는 그 사진으로 안내해요.</p>
         </>
       ) : (
         <>
           <p className="label-medium muted">근처에 고를 만한 가게가 없어요</p>
-          <p className="title-medium">주변을 찍으면 AI가 길잡이를 골라요</p>
+          <p className="title-medium">주변을 찍으면 AI가 사진에서 길잡이를 골라 줘요</p>
           <label htmlFor={inputId} className="btn btn-filled">
             <Icon name="camera" size={18} /> 주변 찍기
           </label>
@@ -512,7 +512,7 @@ export default function WalkPage() {
             const d = Math.round(distanceM(lat, lng, first.lat, first.lng));
             if (d > 80) {
               setFarStart(d);
-              speak(`지금 위치가 이 길의 출발 지점에서 약 ${spokenDistance(d)} 떨어져 있어요. 지금 위치에서 다시 만들 수 있어요.`, { queue: true });
+              speak(`지금 위치가 이 길의 출발 지점에서 약 ${spokenDistance(d)} 떨어져 있어요. 여기서 출발하려면 화면의 '지금 위치에서 다시 만들기'를 눌러 주세요.`, { queue: true });
             }
           }
         }
@@ -729,7 +729,7 @@ export default function WalkPage() {
           <div className="surface-card tonal-card" style={{ gap: 8 }}>
             <p className="body-medium">
               {loc === "denied"
-                ? "위치가 꺼져 있어서 카드를 직접 넘겨요."
+                ? "위치가 꺼져 있어서 카드를 손으로 넘겨야 해요."
                 : "위치를 허용하면 갈림길에 가까워질 때 카드가 저절로 넘어가고, 남은 거리를 소리로 알려 줘요."}
             </p>
             <button
@@ -744,7 +744,7 @@ export default function WalkPage() {
           </div>
         )}
         {permDialog}
-        {autoMode === "manual" && <p className="label-medium muted">위치가 정확하지 않아요. 카드를 직접 넘겨 주세요.</p>}
+        {autoMode === "manual" && <p className="label-medium muted">위치가 잘 안 잡혀요. 갈림길에 닿으면 카드를 직접 넘겨 주세요.</p>}
         {offRoute && (
           <div className="banner body-medium">
             {route.kind === "planned" ? "안내하는 길" : "등록한 길"}에서 조금 멀어졌어요. 길이 헷갈리면 아래 &lsquo;길을 잃었어요&rsquo;를 눌러 주세요.

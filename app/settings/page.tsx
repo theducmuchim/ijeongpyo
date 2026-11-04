@@ -187,7 +187,7 @@ function BackupSection() {
       <p className="section-label label-large">백업</p>
       <Row
         title="길 백업"
-        desc="휴대폰을 바꾸거나 브라우저 기록을 지우면 길이 사라져요."
+        desc="휴대폰을 바꾸거나 브라우저 기록을 지우면 저장한 길이 사라져요. 미리 파일로 백업해 두세요."
       />
       <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 16px 12px" }}>
         <div className="row">
@@ -250,7 +250,7 @@ function PermissionRows() {
   return (
     <>
       <p className="section-label label-large">권한</p>
-      <PermissionRow p="location" title="위치" desc="카드 자동 넘김, 남은 거리 안내" />
+      <PermissionRow p="location" title="위치" desc="카드 저절로 넘기기, 남은 거리 안내" />
       <PermissionRow p="mic" title="마이크" desc="말로 조작하기" />
     </>
   );
@@ -314,13 +314,13 @@ export default function SettingsPage() {
         <Row title="진동 안내" desc="다음 카드가 뜨면 진동해요">
           <Switch label="진동 안내" checked={s.vibrate} onChange={(v) => set({ vibrate: v })} />
         </Row>
-        <Row title="음성 안내" desc="카드 문장, 다음 갈림길까지 거리, 곧 갈림길, 길 벗어남을 소리로 알려 줘요">
+        <Row title="음성 안내" desc="카드 문장과 다음 갈림길까지 거리, 길에서 벗어났을 때를 소리로 알려 줘요">
           <Switch label="음성 안내" checked={s.voice} onChange={(v) => set({ voice: v })} />
         </Row>
         <Row title="화면마다 할 일 읽기" desc="화면이 바뀌면 지금 할 일을 한 줄 읽어 줘요">
           <Switch label="화면마다 할 일 읽기" checked={s.screenSpeech} onChange={(v) => set({ screenSpeech: v })} />
         </Row>
-        <Row title="목소리" desc={s.voiceEngine === "device" ? "휴대폰에 들어 있는 목소리예요. 인터넷이 없어도 돼요." : "사람 같은 AI 목소리예요. 인터넷이 필요하고, 안 되면 휴대폰 목소리로 바로 바꿔요."} />
+        <Row title="목소리" desc={s.voiceEngine === "device" ? "휴대폰에 들어 있는 목소리예요. 인터넷이 없어도 돼요." : "사람처럼 자연스러운 AI 목소리예요. 인터넷이 필요하고, 연결이 안 되면 휴대폰 목소리로 바로 바꿔요."} />
         <div className="seg" role="group" aria-label="목소리">
           {VOICES.map((t) => (
             <button key={t.value} aria-pressed={s.voiceEngine === t.value} onClick={() => set({ voiceEngine: t.value })}>
@@ -342,7 +342,7 @@ export default function SettingsPage() {
               desc={
                 canListenAlways()
                   ? "'계속 듣기'는 걷기와 길 찾기 화면에서만 켜져요. 배터리가 더 빨리 줄 수 있어요."
-                  : "이 브라우저는 버튼을 누를 때만 들을 수 있어요. 버튼을 누르고 말하면, 말을 마칠 때 저절로 멈춰요."
+                  : "이 브라우저에서는 버튼을 누를 때만 들을 수 있어요. 버튼을 누르고 말하면, 말이 끝날 때 저절로 멈춰요."
               }
             />
             <div className="seg" role="group" aria-label="듣는 방식">
@@ -353,7 +353,7 @@ export default function SettingsPage() {
               ))}
             </div>
             <p className="label-medium muted" style={{ padding: "8px 16px 12px" }}>
-              말한 소리는 글자로 바꾸려고 브라우저의 음성 인식(크롬은 구글, 사파리는 애플)이나, 그게 안 되는 브라우저에서는 구글 Gemini로 보내져요. 이정표는 소리를 저장하지 않아요.
+              말한 소리는 글자로 바꾸기 위해 브라우저의 음성 인식(크롬은 구글, 사파리는 애플)으로 보내져요. 음성 인식이 안 되는 브라우저에서는 구글 Gemini로 보내요. 이정표는 소리를 저장하지 않아요.
             </p>
           </>
         ) : (
@@ -366,14 +366,14 @@ export default function SettingsPage() {
         <VoiceLogBox />
 
         <p className="section-label label-large">보호자</p>
-        <Row title="보호자에게 위치 보내기" desc="'길을 잃었어요' 화면에 버튼이 생겨요. 저절로 보내지는 않아요.">
+        <Row title="보호자에게 위치 보내기" desc="'길을 잃었어요' 화면에 위치 보내기 버튼이 생겨요. 누르기 전에는 보내지 않아요.">
           <Switch label="보호자에게 위치 보내기" checked={s.guardianShare} onChange={(v) => set({ guardianShare: v })} />
         </Row>
         {s.guardianShare && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 16px 12px" }}>
             <input className="field" placeholder="보호자 이름 (예: 엄마)" value={s.guardianName} onChange={(e) => set({ guardianName: e.target.value })} />
             <input className="field" placeholder="보호자 전화번호" inputMode="tel" value={s.guardianPhone} onChange={(e) => set({ guardianPhone: e.target.value })} />
-            <p className="label-medium muted">번호는 이 휴대폰에만 저장돼요. 비워 두면 공유 화면이 열려요.</p>
+            <p className="label-medium muted">번호는 이 휴대폰에만 저장돼요. 비워 두면 문자 대신 공유 화면이 열려요.</p>
           </div>
         )}
 
@@ -401,7 +401,7 @@ export default function SettingsPage() {
         <Link href="/demo" className="setting-row pressable">
           <div className="text">
             <p className="body-large">체험하기</p>
-            <p className="body-medium muted">예시 사진으로 등록부터 도착까지</p>
+            <p className="body-medium muted">예시 길로 등록부터 도착까지 둘러보기</p>
           </div>
           <Icon name="forward" />
         </Link>
@@ -413,8 +413,8 @@ export default function SettingsPage() {
           <div className="surface-card">
             <p className="title-medium">사진 처리</p>
             <p className="body-medium muted">
-              길을 등록하거나 찾을 때 사진을 구글 Gemini로 보내요. 무료 서비스라 구글이 서비스 개선에 쓸 수 있어요. 얼굴, 집 주소,
-              문패가 찍히지 않게 해 주세요. 사진과 길 기록은 이 휴대폰에만 저장돼요.
+              길을 등록하거나 찾을 때 사진을 구글 Gemini로 보내요. 무료로 쓰는 서비스라서 구글이 서비스를 좋게 만드는 데 사진을
+              쓸 수 있어요. 그러니 사람 얼굴이나 집 주소, 문패는 찍히지 않게 해 주세요. 사진과 길 기록은 이 휴대폰에만 저장돼요.
             </p>
           </div>
         </div>

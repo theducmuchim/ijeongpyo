@@ -16,7 +16,7 @@ export const FALLBACK: WhereAmIResult = {
   matchedCardOrder: null,
   nextStep: "마지막으로 지나간 카드 장소로 돌아가세요",
   askPhoto: null,
-  reasonForUser: "사진만으로는 위치를 알 수 없어요",
+  reasonForUser: "사진만으로는 어디인지 알 수 없어요",
 };
 
 // 카드 사진 대신 카드 설명 글만 보낸다 (비용과 속도 때문)

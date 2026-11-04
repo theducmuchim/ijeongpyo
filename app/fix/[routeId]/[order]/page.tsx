@@ -37,7 +37,7 @@ export default function FixLandmarkPage() {
   const index = route ? route.cards.findIndex((c) => c.order === Number(order)) : -1;
   const card = route && index >= 0 ? route.cards[index] : null;
 
-  useScreenSpeech(card ? `${josa(card.landmark.name, "이/가")} 안 보이면 이 자리를 다시 찍어 주세요. AI가 새 길잡이를 골라요.` : null);
+  useScreenSpeech(card ? `${josa(card.landmark.name, "이/가")} 안 보이면 이 자리를 다시 찍어 주세요. AI가 사진을 보고 새 길잡이를 골라 줘요.` : null);
 
   const backToWalk = () => {
     setResume(routeId, Number(order));
@@ -97,7 +97,7 @@ export default function FixLandmarkPage() {
         {!photo && (
           <>
             <p className="body-large">
-              {josa(card.landmark.name, "이/가")} 안 보이면 이 자리를 다시 찍어 주세요. AI가 새 길잡이를 골라요.
+              {josa(card.landmark.name, "이/가")} 안 보이면 이 자리를 다시 찍어 주세요. AI가 사진을 보고 새 길잡이를 골라 줘요.
             </p>
             <div className="surface-card" style={{ gap: 12 }}>
               <p className="label-medium muted">지금 카드</p>
