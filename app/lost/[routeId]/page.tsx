@@ -10,6 +10,7 @@ import { permState } from "@/lib/permissions";
 import { hasPlace, placeText } from "@/lib/place";
 import { requestWhereAmI } from "@/lib/api";
 import { db } from "@/lib/db";
+import { distanceToTrackM } from "@/lib/geo";
 import { blobToPayload, shrinkPhoto } from "@/lib/image";
 import { markLost, setResume } from "@/lib/resume";
 import { readLastCardOrder, useSettings } from "@/lib/settings";
@@ -20,13 +21,13 @@ import type { ImagePayload, Route, WhereAmIResult } from "@/types";
 const MAX_TRIES = 3;
 
 // 지금 위치 (5초 안에 못 잡으면 없이 보낸다). 카드 지점까지 거리를 AI가 참고한다.
-async function currentGps(): Promise<{ lat: number; lng: number } | null> {
+async function currentGps(): Promise<{ lat: number; lng: number; accuracy: number } | null> {
   // 위치를 아직 허용하지 않았으면 여기서 갑자기 묻지 않고 사진만 보낸다
   if ((await permState("location")) !== "granted") return null;
   return new Promise((resolve) => {
     if (!("geolocation" in navigator)) return resolve(null);
     navigator.geolocation.getCurrentPosition(
-      (p) => resolve(p.coords.accuracy <= 100 ? { lat: p.coords.latitude, lng: p.coords.longitude } : null),
+      (p) => resolve(p.coords.accuracy <= 100 ? { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: Math.round(p.coords.accuracy) } : null),
       () => resolve(null),
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 10000 },
     );
@@ -97,7 +98,11 @@ export default function LostPage() {
       photos: all,
       said: saidText || undefined,
       lastCardOrder: lastOrder,
-      gps: await currentGps(),
+      gps: await (async () => {
+        const g = await currentGps();
+        // 걷던 길(경로 선)에서 얼마나 떨어졌는지 같이 보낸다. 사진이 비슷해 보여도 멀리 벗어났으면 서버가 '벗어남'으로 알린다
+        return g && route.track && route.track.length > 5 ? { ...g, offTrackM: Math.round(distanceToTrackM(g.lat, g.lng, route.track)) } : g;
+      })(),
       cards: route.cards.map((c) => ({
         order: c.order,
         // 사진 없는 처음 가는 길 카드는 사진 설명 대신 길잡이 후보를 보낸다

@@ -24,7 +24,7 @@ export const requestWhereAmI = (body: {
   photos: ImagePayload[];
   cards: { order: number; photoDescription: string; landmarkName: string; instruction: string; lat?: number; lng?: number }[];
   lastCardOrder: number;
-  gps?: { lat: number; lng: number } | null;
+  gps?: { lat: number; lng: number; accuracy?: number; offTrackM?: number } | null;
   said?: string;
 }) => post<WhereAmIResult & { error?: string }>("/api/where-am-i", body);
 
