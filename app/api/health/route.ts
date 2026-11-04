@@ -125,6 +125,16 @@ export async function GET(req: Request) {
     return Response.json({ tts: out, stt, trace: aiTrace.slice(-8) });
   }
 
+  // ?near=위도,경도: 그 자리 반경 40m 상가정보 점포 목록 (데이터 신뢰도 점검용)
+  if (url.searchParams.get("near")) {
+    const [lat, lng] = url.searchParams.get("near")!.split(",").map(Number);
+    const r = Number(url.searchParams.get("r") || 40);
+    return Response.json(await probe(async () => {
+      const list = await storesNear(lat, lng, r, 100);
+      return { count: list.length, list: list.map((x) => ({ name: x.name, category: x.category, floor: x.floor, lat: x.lat, lng: x.lng, dist: x.dist, building: x.building, road: x.road })) };
+    }));
+  }
+
   // 건물 이름과 번지: TMAP 역지오코딩과 상가정보의 건물 칸
   if (url.searchParams.get("addr")) {
     const [rev, rev2, shops] = await Promise.all([
