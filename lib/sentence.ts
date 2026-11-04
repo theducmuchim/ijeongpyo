@@ -19,7 +19,11 @@ export function sentenceFor(name: string | null, action: Action, crossing = fals
   }
   if (crossing && action === "straight") return name ? `${at}${name} 앞 횡단보도를 건너세요` : "횡단보도를 건너세요";
   if (crossing && (action === "left" || action === "right")) {
-    return name ? `${at}${name}에서 ${DIR[action]}으로 가서 횡단보도를 건너세요` : `여기서 ${DIR[action]}으로 가서 횡단보도를 건너세요`;
+    if (!name) return `여기서 ${DIR[action]}으로 가서 횡단보도를 건너세요`;
+    const dir = DIR[action];
+    if (rel === action) return `${dir} ${josa(name, "을/를")} 끼고 ${dir}으로 가서 횡단보도를 건너세요`;
+    if (rel === "left" || rel === "right") return `${SIDE[rel]}에 ${josa(name, "이/가")} 보이는 곳에서 ${dir}으로 가서 횡단보도를 건너세요`;
+    return `${name}에서 ${dir}으로 가서 횡단보도를 건너세요`;
   }
   if (action === "arrive") {
     if (!name) return "여기가 도착 지점이에요";

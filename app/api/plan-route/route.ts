@@ -59,7 +59,11 @@ function placeOnRoute(list: NearStore[], p: TurnPoint, track: [number, number][]
     const score = dist + 1.2 * Math.max(0, off - 10) + (ground(s.floor) ? 0 : 30) + (rel === "behind" ? 25 : 0);
     return { ...s, rel, off, dist, score };
   });
-  const fits = spots.filter((s) => s.category === POI || ((s.off ?? 0) <= MAX_OFF_ROUTE_M && s.dist <= MAX_FROM_POINT_M && !(p.start && s.rel === "behind")));
+  // 넓은 큰길은 가게가 길 가운데선에서 멀다. 가까운 곳이 하나도 없을 때만 조금 넓혀 본다(그래도 길가만).
+  const within = (off: number, far: number) =>
+    spots.filter((s) => s.category === POI || ((s.off ?? 0) <= off && s.dist <= far && !(p.start && s.rel === "behind")));
+  let fits = within(MAX_OFF_ROUTE_M, MAX_FROM_POINT_M);
+  if (!fits.some((s) => s.category !== POI)) fits = within(MAX_OFF_ROUTE_M + 15, MAX_FROM_POINT_M + 25);
   fits.sort((a, b) => a.score - b.score);
   return fits.map((s) => ({ ...s, score: undefined }) as Spot);
 }
