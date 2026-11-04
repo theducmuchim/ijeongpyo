@@ -38,7 +38,10 @@ export function mockRoute(start: { lat: number; lng: number }, end: { lat: numbe
     track.slice(1).reduce((sum, p, i) => sum + Math.hypot((p[0] - track[i][0]) * 90000, (p[1] - track[i][1]) * 111000), 0),
   );
   return {
-    points: actions.map((x) => ({ lat: x.p.lat, lng: x.p.lng, action: x.action, crossing: x.crossing, description: x.d, nearPoiName: "" })),
+    points: [
+      { lat: start.lat, lng: start.lng, action: "straight" as Action, crossing: false, description: "출발", nearPoiName: "", start: true },
+      ...actions.map((x) => ({ lat: x.p.lat, lng: x.p.lng, action: x.action, crossing: x.crossing, description: x.d, nearPoiName: "" })),
+    ],
     track,
     totalDistance: dist,
     totalTime: Math.round(dist / 1.1),

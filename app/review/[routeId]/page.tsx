@@ -138,7 +138,7 @@ export default function ReviewPage() {
                 </label>
                 <div className="text" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <p className="label-medium primary-text">
-                    {c.order}번 · {ACTION_LABEL[c.action]} · 길잡이: {c.landmark.name}
+                    {c.order}번 · {c.start ? "출발" : ACTION_LABEL[c.action]} · 길잡이: {c.landmark.name}
                   </p>
                   {fixing === i ? (
                     <>

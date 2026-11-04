@@ -38,7 +38,7 @@ function mergeClose(points: TurnPoint[]): TurnPoint[] {
   for (const p of points) {
     const prev = out.at(-1);
     const oneIsCrossing = prev && ((prev.action === "straight" && prev.crossing) || (p.action === "straight" && p.crossing));
-    if (prev && p.action !== "arrive" && oneIsCrossing && meters(prev, p) < MERGE_M) {
+    if (prev && !prev.start && p.action !== "arrive" && oneIsCrossing && meters(prev, p) < MERGE_M) {
       out[out.length - 1] = {
         ...prev, // 먼저 닿는 자리를 카드 위치로 둔다
         action: prev.action === "straight" ? p.action : prev.action,
@@ -82,6 +82,7 @@ export type TurnPoint = {
   crossing: boolean; // 횡단보도를 건너는 지점
   description: string; // TMAP 안내 문장 (예: "좌회전 후 월드컵로를 따라 223m 이동")
   nearPoiName: string;
+  start?: boolean; // 출발 지점 (TMAP turnType 200)
 };
 
 export type WalkRoute = { points: TurnPoint[]; track: [number, number][]; totalDistance: number; totalTime: number };
@@ -134,11 +135,17 @@ export async function pedestrianRoute(start: { lat: number; lng: number }, end: 
       const [lng, lat] = (g.coordinates as number[]).map(Number);
       const description = str(pr.description);
       const kind = classify(num(pr.turnType), description);
-      if (!kind || kind === "start") continue;
+      if (!kind) continue;
+      // 출발 지점은 지금 서 있는 곳에서 어느 쪽으로 걸어갈지 알려 주는 첫 카드가 된다
+      if (kind === "start") {
+        if (!points.length) points.push({ lat, lng, action: "straight", crossing: false, description, nearPoiName: decode(str(pr.nearPoiName)), start: true });
+        continue;
+      }
       points.push({ lat, lng, action: kind.action, crossing: kind.crossing, description, nearPoiName: decode(str(pr.nearPoiName)) });
     }
   }
-  if (points.length === 0 || points.at(-1)!.action !== "arrive") {
+  if (!points[0]?.start) points.unshift({ lat: start.lat, lng: start.lng, action: "straight", crossing: false, description: "출발", nearPoiName: "", start: true });
+  if (points.at(-1)!.action !== "arrive") {
     points.push({ lat: end.lat, lng: end.lng, action: "arrive", crossing: false, description: "도착", nearPoiName: end.name });
   }
   return { points: mergeClose(points), track, totalDistance, totalTime };

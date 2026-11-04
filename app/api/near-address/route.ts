@@ -5,7 +5,7 @@ import type { PlaceInfo } from "@/types";
 export const maxDuration = 30;
 
 // 갈림길 좌표마다 근처 건물 이름과 번지를 찾는다. 같이 걸으며 등록한 길과, 예전에 만든 길의 카드에 붙인다.
-// AI를 쓰지 않아서 하루 사용 횟수를 줄이지 않는다.
+// AI를 쓰지 않는다.
 const MAX = 25;
 
 export async function POST(req: Request) {

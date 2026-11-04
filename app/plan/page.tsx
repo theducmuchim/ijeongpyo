@@ -16,7 +16,8 @@ import { toast } from "@/lib/toast";
 import { bearingDeg, distanceM } from "@/lib/geo";
 import { logEvent } from "@/lib/usageLog";
 import { permState } from "@/lib/permissions";
-import { placeSpeech } from "@/lib/place";
+import { freshFix, POOR_FIX_M, type Fix } from "@/lib/locate";
+import { placeSpeech, placeText } from "@/lib/place";
 import { type Command, PLAN_QUERY_KEY, speak } from "@/lib/voice";
 import type { Card, CheckResult, Place, PlanCard, PlanResult, Route } from "@/types";
 
@@ -26,6 +27,7 @@ type Shot = { url: string; blob: Blob; result?: CheckResult; busy?: boolean };
 // 처음 가는 길: 도착지를 고르면 지도 데이터로 사진 없는 카드 초안을 만들고, 미리 둘러본 뒤 걷는다.
 
 const SHORT_LABEL = { straight: "곧장", left: "왼쪽", right: "오른쪽", arrive: "도착" } as const;
+const shortLabel = (c: PlanCard) => (c.start ? "출발" : SHORT_LABEL[c.action]);
 
 // '길을 잃었어요'에서 '여기서 다시 길 찾기'로 오면 도착지가 미리 들어 있다
 let destCache: (Place & { from?: string }) | null | undefined;
@@ -107,7 +109,8 @@ export default function PlanPage() {
   const [placesMock, setPlacesMock] = useState(false);
   const [dest, setDest] = useState<Place | null>(null);
   const [plan, setPlan] = useState<PlanResult | null>(null);
-  const [busy, setBusy] = useState<"search" | "plan" | "save" | null>(null);
+  const [busy, setBusy] = useState<"search" | "locate" | "plan" | "save" | null>(null);
+  const [startFix, setStartFix] = useState<Fix | null>(null); // 카드를 만들 때 새로 잡은 출발 위치
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<number | null>(null); // 로드뷰를 연 카드
   const [name, setName] = useState("");
@@ -176,19 +179,45 @@ export default function PlanPage() {
     }
   }
 
-  async function makePlan(to: Place, from: Gps = here) {
-    if (!from) return setError("출발 위치를 알 수 없어요. 휴대폰 설정에서 위치를 허용해 주세요.");
+  // 출발지는 '지금 서 있는 곳'이다. 화면을 열 때 잡은 위치는 오래됐거나 부정확할 수 있어서,
+  // 카드를 만들기 직전에 위치를 새로 잡는다. 잡히지 않으면 화면을 열 때 잡은 위치를 쓴다.
+  async function makePlan(to: Place, fallback: Gps = here) {
     setDest(to);
     setName(`${to.name.replace(/^\(시험\)\s*/, "")} 가는 길`);
-    setBusy("plan");
     setError(null);
+    setBusy("locate");
+    let from: Fix | null = null;
     try {
-      setPlan(await requestPlan({ start: from, end: { lat: to.lat, lng: to.lng, name: to.name } }));
+      from = await freshFix();
+    } catch (e) {
+      if (fallback) from = { ...fallback, accuracy: -1 };
+      else {
+        setBusy(null);
+        return setError((e as Error).message);
+      }
+    }
+    setStartFix(from);
+    setGps({ lat: from.lat, lng: from.lng });
+    setBusy("plan");
+    try {
+      setPlan(await requestPlan({ start: { lat: from.lat, lng: from.lng }, end: { lat: to.lat, lng: to.lng, name: to.name } }));
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(null);
     }
+  }
+
+  // 도착지를 고르면: 위치 권한이 없으면 먼저 물어보고, 지금 위치에서 출발하는 카드를 만든다
+  async function choose(to: Place) {
+    if (gps === "ask" || gps === "denied") {
+      const perm = await ensurePerm("location");
+      if (!perm.ok) {
+        setGps("denied");
+        return setError("출발지는 지금 위치라서 위치 권한이 필요해요. 설정에서 위치를 허용해 주세요.");
+      }
+    }
+    makePlan(to);
   }
 
   async function addShot(i: number, c: PlanCard, file: File) {
@@ -254,6 +283,7 @@ export default function PlanPage() {
           source: "photo",
           candidates: c.candidates,
           place: c.place,
+          start: c.start,
           checkedAt: new Date().toISOString(),
         };
       }
@@ -272,6 +302,7 @@ export default function PlanPage() {
       source: "draft",
       candidates: c.candidates,
       place: c.place,
+      start: c.start,
       };
     });
     const route: Route = {
@@ -312,6 +343,17 @@ export default function PlanPage() {
   );
   const searchCommands: Command[] = ORDINALS.map((say, i) => ({ id: String(i), label: `${i + 1}번 고르기`, say, when: !!places && i < places.length }));
 
+  if (busy === "locate") {
+    return (
+      <main className="screen">
+        <AppBar title="처음 가는 길" />
+        <div className="body">
+          <AiWaiting title="지금 위치 확인 중" hint="출발지를 정확히 잡고 있어요. 몇 초 걸려요" stepMs={2500} steps={["GPS 받는 중", "위치 맞추는 중"]} />
+        </div>
+      </main>
+    );
+  }
+
   if (busy === "plan") {
     return (
       <main className="screen">
@@ -343,7 +385,24 @@ export default function PlanPage() {
             <p className="body-medium muted">
               {km(plan.totalDistance)} · 걸어서 약 {Math.max(1, Math.round(plan.totalTime / 60))}분 · 카드 {plan.cards.length}장
             </p>
+            <p className="body-medium">
+              출발: 지금 위치{placeText(plan.from) ? ` · ${placeText(plan.from)} 근처` : ""}
+              {startFix && startFix.accuracy >= 0 && <span className="muted"> · 오차 약 {startFix.accuracy}m</span>}
+            </p>
           </div>
+          {startFix && (startFix.accuracy < 0 || startFix.accuracy > POOR_FIX_M) && (
+            <div className="banner body-medium" role="status" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <span>
+                {startFix.accuracy < 0
+                  ? "지금 위치를 새로 잡지 못해서 조금 전 위치로 만들었어요."
+                  : `위치가 정확하지 않아요(오차 약 ${startFix.accuracy}m). 출발 카드가 실제 자리와 다를 수 있어요.`}{" "}
+                밖으로 나가 잠시 기다린 뒤 다시 잡아 주세요.
+              </span>
+              <button className="btn btn-tonal" style={{ alignSelf: "flex-start" }} onClick={() => makePlan(target)}>
+                <Icon name="flag" size={18} /> 지금 위치로 다시 만들기
+              </button>
+            </div>
+          )}
           <p className="body-medium muted">
             아직 사진이 없는 카드예요. 로드뷰로 그 자리를 미리 보고, 사진이 있으면 올려 주세요. 없으면 걸으면서 채워요.
           </p>
@@ -360,12 +419,15 @@ export default function PlanPage() {
             {plan.cards.map((c, i) => {
               const nx = plan.cards[i + 1];
               const heading = nx ? bearingDeg(c.lat, c.lng, nx.lat, nx.lng) : undefined;
+              const guide = c.candidates[0];
+              // 로드뷰는 길잡이 가게 쪽을 보게 하고 상호명을 띄운다 (지도 안내 이름은 좌표가 지점 좌표라 방향만)
+              const shop = guide && guide.category !== "지도 안내에 나오는 곳" ? { lat: guide.lat, lng: guide.lng, name: guide.name } : undefined;
               const tone = c.action === "arrive" ? TONES[3] : i === 0 ? TONES[0] : null;
               return (
                 <div key={c.order} className="t-row">
                   <div className="t-num">
                     <b>{c.order}</b>
-                    <small>{SHORT_LABEL[c.action]}</small>
+                    <small>{shortLabel(c)}</small>
                   </div>
                   <div className={`t-card${tone ? " tone" : ""}`} style={tone ? { background: tone.bg } : undefined}>
                     {tone && <CornerBlob color={tone.blob} />}
@@ -384,7 +446,7 @@ export default function PlanPage() {
                     <button className="btn btn-text label-large" style={{ alignSelf: "flex-start", padding: 0, minHeight: 36, position: "relative" }} onClick={() => setOpen(open === i ? null : i)}>
                       <Icon name="image" size={18} /> {open === i ? "로드뷰 닫기" : "로드뷰로 미리 보기"}
                     </button>
-                    {open === i && <Roadview lat={c.lat} lng={c.lng} heading={heading} />}
+                    {open === i && <Roadview lat={c.lat} lng={c.lng} heading={heading} target={shop} />}
                     <ShotBox i={i} card={c} shot={shots[i]} onPick={(f) => addShot(i, c, f)} onRemove={() => removeShot(i)} />
                   </div>
                 </div>
@@ -444,7 +506,7 @@ export default function PlanPage() {
         {places && places.length > 0 && (
           <VoiceControl
             commands={searchCommands}
-            onCommand={(id) => places[Number(id)] && makePlan(places[Number(id)])}
+            onCommand={(id) => places[Number(id)] && choose(places[Number(id)])}
             onOther={(t) => search(t, true)}
             examples="'첫 번째', 또는 다른 도착지 이름"
             label="말로 고르기"
@@ -456,7 +518,7 @@ export default function PlanPage() {
         {places?.length === 0 && <p className="body-medium muted">찾는 장소가 없어요. 다른 이름으로 검색해 보세요.</p>}
         <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {places?.map((p) => (
-            <button key={`${p.name}-${p.lat}`} className="list-row" style={{ textAlign: "left", border: "none", width: "100%" }} onClick={() => makePlan(p)} disabled={!here}>
+            <button key={`${p.name}-${p.lat}`} className="list-row" style={{ textAlign: "left", border: "none", width: "100%" }} onClick={() => choose(p)}>
               <span className="avatar">
                 <Icon name="flag" />
               </span>

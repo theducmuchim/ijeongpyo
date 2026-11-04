@@ -33,3 +33,66 @@ export function bearingDeg(lat1: number, lng1: number, lat2: number, lng2: numbe
   const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lng2 - lng1));
   return (((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
 }
+
+/* ───────────── 걷는 방향 기준으로 길잡이가 어느 쪽에 있는지 ───────────── */
+
+// 경로(점들)에서 이 좌표와 가장 가까운 점의 번호
+export function nearestIndex(track: [number, number][], lat: number, lng: number): number {
+  let best = 0;
+  let bestD = Infinity;
+  track.forEach(([tLng, tLat], i) => {
+    const d = distanceM(lat, lng, tLat, tLng);
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  });
+  return best;
+}
+
+// 경로를 따라 i번 점에서 앞(+) 또는 뒤(-)로 약 meters 떨어진 점
+export function pointAlong(track: [number, number][], i: number, meters: number): { lat: number; lng: number } {
+  const step = meters >= 0 ? 1 : -1;
+  let left = Math.abs(meters);
+  let k = i;
+  while (k + step >= 0 && k + step < track.length && left > 0) {
+    left -= distanceM(track[k][1], track[k][0], track[k + step][1], track[k + step][0]);
+    k += step;
+  }
+  return { lat: track[k][1], lng: track[k][0] };
+}
+
+// 걷는 방향(heading)으로 볼 때 그 좌표가 어디에 있나: 정면 / 왼쪽 / 오른쪽 / 뒤(이미 지나옴)
+export type RelSide = "ahead" | "left" | "right" | "behind";
+export function relativeSide(fromLat: number, fromLng: number, heading: number, lat: number, lng: number): RelSide {
+  const rel = ((bearingDeg(fromLat, fromLng, lat, lng) - heading + 540) % 360) - 180; // -180~180, 음수면 왼쪽
+  if (Math.abs(rel) <= 25) return "ahead";
+  if (Math.abs(rel) >= 155) return "behind";
+  return rel < 0 ? "left" : "right";
+}
+
+// 좌표에서 경로 일부(i번 점 앞뒤 window m)까지 가장 가까운 거리. 가게가 실제로 걷는 길가에 있는지 볼 때 쓴다.
+export function distanceToTrackNear(track: [number, number][], i: number, lat: number, lng: number, windowM = 60): number {
+  let best = Infinity;
+  const a = Math.max(0, i - 40);
+  const b = Math.min(track.length - 1, i + 40);
+  const [cLng, cLat] = track[i];
+  for (let k = a; k < b; k++) {
+    const [x1, y1] = track[k];
+    const [x2, y2] = track[k + 1];
+    if (distanceM(cLat, cLng, y1, x1) > windowM && distanceM(cLat, cLng, y2, x2) > windowM) continue;
+    best = Math.min(best, pointToSegmentM(lat, lng, y1, x1, y2, x2));
+  }
+  return Number.isFinite(best) ? best : distanceM(lat, lng, cLat, cLng);
+}
+
+function pointToSegmentM(lat: number, lng: number, lat1: number, lng1: number, lat2: number, lng2: number) {
+  // 좁은 범위라 평면으로 계산한다
+  const kx = Math.cos(rad(lat)) * 111320;
+  const ky = 110540;
+  const px = (lng - lng1) * kx, py = (lat - lat1) * ky;
+  const vx = (lng2 - lng1) * kx, vy = (lat2 - lat1) * ky;
+  const len = vx * vx + vy * vy;
+  const t = len ? Math.max(0, Math.min(1, (px * vx + py * vy) / len)) : 0;
+  return Math.hypot(px - t * vx, py - t * vy);
+}

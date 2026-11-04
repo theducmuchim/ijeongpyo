@@ -26,7 +26,15 @@ export type PlaceInfo = {
 };
 
 // 처음 가는 길의 길잡이 후보 (상가정보 공공데이터에서 온 가게)
-export type Candidate = { name: string; category?: string; floor?: string; lat: number; lng: number } & PlaceInfo;
+export type Candidate = {
+  name: string;
+  category?: string;
+  floor?: string;
+  lat: number;
+  lng: number;
+  rel?: "ahead" | "left" | "right" | "behind"; // 갈림길로 걸어올 때 이 가게가 보이는 쪽
+  dist?: number; // 갈림길 지점에서 몇 m
+} & PlaceInfo;
 
 export type Side = "left" | "right" | "ahead";
 export type Action = "straight" | "left" | "right" | "arrive";
@@ -48,6 +56,7 @@ export type Card = {
   candidates?: Candidate[]; // 초안 카드의 길잡이 후보 (첫 번째가 지금 길잡이)
   checkedAt?: string; // 처음 걸을 때 길잡이를 확인한 시각
   place?: PlaceInfo; // 길잡이가 있는 건물 이름과 번지. 빈 값({})이면 찾아봤지만 없었다는 뜻
+  start?: boolean; // 처음 가는 길의 출발 카드 (지금 위치에서 어느 쪽으로 출발하는지)
 };
 
 // 등록 중에 모으는 갈림길 하나 (아직 AI가 정리하기 전)
@@ -126,6 +135,7 @@ export type PlanCard = {
   landmark: { name: string; side: Side };
   candidates: Candidate[];
   place?: PlaceInfo;
+  start?: boolean;
   lat: number;
   lng: number;
 };
@@ -136,6 +146,7 @@ export type PlanResult = {
   totalTime: number; // 초
   mock?: boolean;
   missing?: string[]; // 시험 모드일 때 빠진 키: TMAP, 상가정보, AI
+  from?: PlaceInfo; // 출발 자리(지금 위치)의 건물·번지
 };
 
 export type Place = { name: string; address: string; lat: number; lng: number };

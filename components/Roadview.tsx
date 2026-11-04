@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { bearingDeg, distanceM } from "@/lib/geo";
 
 // 출발 전 미리 둘러보기: 카카오 로드뷰를 실시간 뷰어로만 보여 준다.
 // 카카오 정책상 화면 캡처·저장·AI 분석은 하지 않는다 (사람이 보는 용도만).
@@ -46,7 +47,18 @@ function loadSdk(): Promise<void> {
 type State = "loading" | "ok" | "none" | "error";
 const TIMEOUT_MS = 20000; // 지도 파일과 지점 찾기까지 (사진이 채워지는 시간은 빼고)
 
-export function Roadview({ lat, lng, heading }: { lat: number; lng: number; heading?: number }) {
+type Target = { lat: number; lng: number; name: string };
+
+// 로드뷰 위에 띄우는 상호명 표시 (카카오 커스텀 오버레이 내용)
+function labelEl(name: string) {
+  const el = document.createElement("div");
+  el.className = "rv-label";
+  el.textContent = name;
+  return el;
+}
+
+/** target(길잡이 가게)이 있으면 그 가게 쪽을 보게 돌리고, 가게 자리에 상호명을 띄운다. */
+export function Roadview({ lat, lng, heading, target }: { lat: number; lng: number; heading?: number; target?: Target }) {
   const box = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<State>("loading");
   const [why, setWhy] = useState("");
@@ -89,12 +101,43 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
           // 크기를 다시 재라고(relayout) 몇 번 알려 준다. 시점은 사용자가 직접 돌리기 전까지만 맞춘다.
           let touched = false;
           box.current?.addEventListener("pointerdown", () => (touched = true), { once: true });
+          // 길잡이 가게가 있으면: 로드뷰 사진을 찍은 자리에서 가게 쪽으로 시점을 돌리고, 가게 자리에 상호명을 띄운다
+          let overlay: any = null;
+          const showTarget = () => {
+            if (!target || overlay) return;
+            try {
+              overlay = new k.CustomOverlay({ position: new k.LatLng(target.lat, target.lng), content: labelEl(target.name), xAnchor: 0.5, yAnchor: 1 });
+              overlay.setAltitude?.(3);
+              overlay.setMap(rv);
+              cleanups.push(() => overlay?.setMap(null));
+            } catch {
+              overlay = null; // 로드뷰가 아직 준비되지 않았으면 다음 차례에 다시 한다
+            }
+          };
+          const look = (): number | undefined => {
+            if (!target) return heading;
+            let from = { lat, lng };
+            try {
+              const p = rv.getPosition();
+              if (p) from = { lat: p.getLat(), lng: p.getLng() };
+            } catch {}
+            if (distanceM(from.lat, from.lng, target.lat, target.lng) < 2) return heading;
+            return bearingDeg(from.lat, from.lng, target.lat, target.lng);
+          };
+          k.event?.addListener?.(rv, "init", () => {
+            if (!alive) return;
+            showTarget();
+            const pan = look();
+            if (pan !== undefined && !touched) rv.setViewpoint({ pan, tilt: 0, zoom: 0 });
+          });
           for (const ms of [300, 1500, 3500, 6000, 9000, 13000, 18000]) {
             setTimeout(() => {
               if (!alive) return;
               try {
                 rv.relayout();
-                if (heading !== undefined && !touched) rv.setViewpoint({ pan: heading, tilt: 0, zoom: 0 });
+                if (ms >= 1500) showTarget();
+                const pan = look();
+                if (pan !== undefined && !touched) rv.setViewpoint({ pan, tilt: 0, zoom: 0 });
               } catch {
                 // 다시 그리기나 시점 맞추기를 못 해도 로드뷰는 그대로 둔다
               }
@@ -134,7 +177,9 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
       clearTimeout(timer);
       cleanups.forEach((f) => f());
     };
-  }, [lat, lng, heading]);
+    // target은 화면이 그려질 때마다 새 객체라서 값으로 묶는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lat, lng, heading, target?.lat, target?.lng, target?.name]);
 
   if (!KEY) {
     return (
@@ -145,14 +190,19 @@ export function Roadview({ lat, lng, heading }: { lat: number; lng: number; head
   }
   return (
     <div className="roadview-wrap">
-      <div ref={box} className="roadview" aria-label="로드뷰" />
+      <div ref={box} className="roadview" aria-label={target ? `로드뷰. 가운데 쪽에 ${target.name}` : "로드뷰"} />
+      {target && state === "ok" && (
+        <p className="rv-badge label-large" aria-hidden>
+          길잡이 <b>{target.name}</b> · 화면 가운데 쪽
+        </p>
+      )}
       {state !== "ok" && (
         <div className="roadview-msg body-medium muted">
           {state === "loading" ? "로드뷰 불러오는 중…" : state === "none" ? "이 지점은 로드뷰가 없어요." : `로드뷰를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요. (${why})`}
         </div>
       )}
       <p className="label-medium muted" style={{ marginTop: 6 }}>
-        거리 사진이 뜨기까지 10초쯤 걸릴 수 있어요. 찍은 지 오래돼서 가게가 바뀌었을 수도 있어요.
+        {target ? "노란 이름표가 붙은 곳이 길잡이 가게 자리예요. " : ""}거리 사진이 뜨기까지 10초쯤 걸릴 수 있어요. 찍은 지 오래돼서 가게가 바뀌었을 수도 있어요.
       </p>
     </div>
   );

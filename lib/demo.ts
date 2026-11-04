@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import type { CardDraft, ReplaceResult, Route, WhereAmIResult } from "@/types";
 
 // 체험하기에 쓰는 길. 사진은 public/demo에 직접 그려 둔 거리 그림이고, 실제 장소가 아니다.
-// AI 답도 미리 써 둔 것이라 사용 횟수를 쓰지 않는다. ('진짜 AI로 만들어 보기'를 누를 때만 AI를 부른다)
+// AI 답도 미리 써 둔 것이라 AI를 부르지 않는다. ('진짜 AI로 만들어 보기'를 누를 때만 AI를 부른다)
 
 export const DEMO_ROUTE_ID = "demo-route";
 export const DEMO_ROUTE_NAME = "체험: 학교 가는 길";

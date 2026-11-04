@@ -130,7 +130,7 @@ export default function RecordPage() {
       } catch (e) {
         failMessage ??= (e as Error).message;
         // 하루 횟수를 다 쓴 경우는 다음 묶음도 안 되므로 멈춘다
-        if (/횟수/.test(failMessage)) break;
+        if (/횟수|사용하는 사람이 많아요/.test(failMessage)) break;
       }
     }
     setProgress(null);

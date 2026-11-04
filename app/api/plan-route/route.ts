@@ -3,6 +3,7 @@ import { mockPlace, mockRoute, mockStoresNear } from "@/lib/planMock";
 import { PLAN_ROUTE_PROMPT } from "@/lib/prompts";
 import { checkLimit } from "@/lib/rateLimit";
 import { parsePlan } from "@/lib/schemas";
+import { bearingDeg, distanceM, distanceToTrackNear, nearestIndex, pointAlong, relativeSide } from "@/lib/geo";
 import { sentenceFor } from "@/lib/sentence";
 import { hasStores, rankForLandmark, storesNear, type NearStore } from "@/lib/stores";
 import { placeFromCandidate } from "@/lib/place";
@@ -20,7 +21,48 @@ type Body = { start?: { lat: number; lng: number }; end?: { lat: number; lng: nu
 
 const ok = (p?: { lat: number; lng: number }) => !!p && Number.isFinite(p.lat) && Number.isFinite(p.lng);
 const ACTION_KO = { straight: "곧장", left: "왼쪽으로 꺾기", right: "오른쪽으로 꺾기", arrive: "도착" } as const;
-const toCandidate = ({ name, category, floor, lat, lng, building, road, jibun }: NearStore): Candidate => ({ name, category, floor, lat, lng, building, road, jibun });
+const POI = "지도 안내에 나오는 곳";
+const REL_KO = { ahead: "정면", left: "왼쪽", right: "오른쪽", behind: "지나온 뒤쪽" } as const;
+// 출발 카드는 출발점 가까이에 첫 갈림길이 있으면 만들지 않는다 (서 있는 자리에서 바로 첫 카드가 뜬다)
+const START_SKIP_M = 25;
+// 길잡이는 실제로 걷는 길가에 있어야 한다. 좌표가 길에서 이만큼 넘게 떨어진 가게(뒷골목, 큰 건물 안쪽)는 쓰지 않는다.
+const MAX_OFF_ROUTE_M = 30;
+const MAX_FROM_POINT_M = 45;
+
+type Spot = NearStore & { rel?: Candidate["rel"]; off?: number };
+const toCandidate = ({ name, category, floor, lat, lng, building, road, jibun, rel, dist }: Spot): Candidate => ({ name, category, floor, lat, lng, building, road, jibun, rel, dist });
+
+// 그 지점을 보는 자리와 방향: 갈림길은 10m 앞에서 걸어오는 방향으로, 출발은 서 있는 곳에서 걸어 나갈 방향으로
+function viewOf(track: [number, number][], p: TurnPoint) {
+  if (track.length < 2) return null;
+  const i = nearestIndex(track, p.lat, p.lng);
+  if (p.start) {
+    const to = pointAlong(track, i, 25);
+    if (distanceM(p.lat, p.lng, to.lat, to.lng) < 3) return null;
+    return { i, from: { lat: p.lat, lng: p.lng }, heading: bearingDeg(p.lat, p.lng, to.lat, to.lng), look: pointAlong(track, i, 30) };
+  }
+  const from = pointAlong(track, i, -10);
+  if (distanceM(from.lat, from.lng, p.lat, p.lng) < 3) return null;
+  return { i, from, heading: bearingDeg(from.lat, from.lng, p.lat, p.lng), look: { lat: p.lat, lng: p.lng } };
+}
+
+// 가게마다 걸어오며 보이는 쪽과 길까지 거리를 붙이고, 실제로 눈에 들어올 순서로 다시 줄 세운다
+function placeOnRoute(list: NearStore[], p: TurnPoint, track: [number, number][]): Spot[] {
+  const v = viewOf(track, p);
+  if (!v) return list;
+  const ground = (f?: string) => !f || f === "1" || f === "1층";
+  const spots = list.map((s): Spot & { score: number } => {
+    if (s.category === POI) return { ...s, score: -1 }; // 지도 안내 이름은 좌표가 지점 좌표라 쪽을 모른다
+    const rel = relativeSide(v.from.lat, v.from.lng, v.heading, s.lat, s.lng);
+    const off = Math.round(distanceToTrackNear(track, v.i, s.lat, s.lng, 60));
+    const dist = Math.round(distanceM(v.look.lat, v.look.lng, s.lat, s.lng));
+    const score = dist + 1.2 * Math.max(0, off - 10) + (ground(s.floor) ? 0 : 30) + (rel === "behind" ? 25 : 0);
+    return { ...s, rel, off, dist, score };
+  });
+  const fits = spots.filter((s) => s.category === POI || ((s.off ?? 0) <= MAX_OFF_ROUTE_M && s.dist <= MAX_FROM_POINT_M && !(p.start && s.rel === "behind")));
+  fits.sort((a, b) => a.score - b.score);
+  return fits.map((s) => ({ ...s, score: undefined }) as Spot);
+}
 
 // 처음 가는 길: 출발·도착 → TMAP 보행자 경로 → 꺾는 지점마다 주변 가게 → AI가 길잡이를 고르고 문장을 쓴다.
 // 키가 없는 서비스는 시험용 데이터로 대신한다(시험 모드).
@@ -44,35 +86,49 @@ export async function POST(req: Request) {
     // 1. 걷는 길과 꺾는 지점
     const route = hasTmap() ? await pedestrianRoute(start!, end!) : mockRoute(start!, end!);
     const t0 = Date.now();
-    const points: TurnPoint[] = route.points;
+    const all: TurnPoint[] = route.points;
+    // 출발 카드: 지금 위치에서 어느 쪽으로 걸어 나가는지. 첫 갈림길이 바로 앞이면 빼고, 위치는 사용자가 서 있는 곳으로 둔다.
+    const points = all.filter((p, i) => !p.start || (all[i + 1] && distanceM(p.lat, p.lng, all[i + 1].lat, all[i + 1].lng) >= START_SKIP_M));
+    if (points[0]?.start) points[0] = { ...points[0], lat: start!.lat, lng: start!.lng };
+    // 출발 자리의 건물·번지 (화면에 "출발: 지금 위치 · ○○ 근처"로 보여 준다)
+    const fromPlace = hasTmap() ? reverseGeocode(start!.lat, start!.lng).catch(() => null) : Promise.resolve(mockPlace(start!.lat, start!.lng));
 
     // 2. 지점마다 주변 가게 (없으면 반경을 넓혀 한 번 더). 상가정보 키가 없으면 TMAP의 근처 장소 이름이라도 쓴다.
     // 공공데이터포털이 한꺼번에 부르면 429를 주므로 3곳씩 나눠 부른다
-    const lookup = async (p: TurnPoint, i: number): Promise<NearStore[]> => {
+    const lookup = async (p: TurnPoint, i: number): Promise<Spot[]> => {
+      // 출발 카드는 걸어 나갈 길 30m 앞 언저리에서 찾는다
+      const at = p.start && route.track.length > 1 ? pointAlong(route.track, nearestIndex(route.track, p.lat, p.lng), 30) : p;
       if (!hasStores()) {
-        if (!hasTmap()) return mockStoresNear(p.lat, p.lng, i);
-        return p.nearPoiName ? [{ name: p.nearPoiName, lat: p.lat, lng: p.lng, dist: 0 }] : [];
+        if (!hasTmap()) return placeOnRoute(mockStoresNear(at.lat, at.lng, i), p, route.track).slice(0, 6);
+        return p.nearPoiName && !p.start ? [{ name: p.nearPoiName, lat: p.lat, lng: p.lng, dist: 0 }] : [];
       }
-      let ranked: NearStore[] = [];
+      let ranked: Spot[] = [];
       try {
-        let list = await storesNear(p.lat, p.lng, 40);
-        if (list.length === 0) list = await storesNear(p.lat, p.lng, 80);
-        ranked = rankForLandmark(list, 6);
+        let list = await storesNear(at.lat, at.lng, 40);
+        if (list.length === 0) list = await storesNear(at.lat, at.lng, 80);
+        // 같은 이름을 하나로 줄인 뒤(rankForLandmark), 길가에 있고 걸어오며 보이는 순서로 다시 줄 세운다
+        ranked = placeOnRoute(rankForLandmark(list, 40), p, route.track).slice(0, 6);
       } catch (e) {
         console.error("[plan-route] 상가정보", String((e as Error).message).slice(0, 200));
       }
       // TMAP이 그 지점 안내에 쓴 이름(예: "대전역 3번출구", "역전약국")은 실제로 보이는 것일 가능성이 높아 맨 앞에 둔다
-      const poi = p.action === "arrive" ? "" : p.nearPoiName;
-      if (poi && !ranked.some((s) => s.name === poi)) ranked.unshift({ name: poi, category: "지도 안내에 나오는 곳", lat: p.lat, lng: p.lng, dist: 0 });
+      const poi = p.action === "arrive" || p.start ? "" : p.nearPoiName;
+      if (poi && !ranked.some((s) => s.name === poi)) ranked.unshift({ name: poi, category: POI, lat: p.lat, lng: p.lng, dist: 0 });
       return ranked;
     };
-    const nearby: NearStore[][] = [];
+    const nearby: Spot[][] = [];
     for (let k = 0; k < points.length; k += 3) {
       nearby.push(...(await Promise.all(points.slice(k, k + 3).map((p, j) => lookup(p, k + j)))));
     }
     const describe = (p: TurnPoint, i: number, n: number) => {
-      const shops = nearby[i].map((s) => `${s.name}(${s.category || "업종 모름"}, ${s.floor ? `${s.floor}층` : "층 모름"}, ${s.dist}m)`).join(", ");
-      return `${n}번 지점: 행동 ${p.action}(${ACTION_KO[p.action]}${p.crossing ? ", 횡단보도 건넘" : ""}) / 가게 후보: ${shops || "없음"}`;
+      const shops = nearby[i]
+        .map((s) => {
+          const where = s.rel ? `, ${REL_KO[s.rel]}, 걷는 길에서 ${s.off ?? 0}m` : "";
+          return `${s.name}(${s.category || "업종 모름"}, ${s.floor ? `${s.floor}층` : "층 모름"}, 지점에서 ${s.dist}m${where})`;
+        })
+        .join(", ");
+      const act = p.start ? "start(출발: 서 있는 곳에서 걸어 나가기)" : `${p.action}(${ACTION_KO[p.action]}${p.crossing ? ", 횡단보도 건넘" : ""})`;
+      return `${n}번 지점: 행동 ${act} / 가게 후보: ${shops || "없음"}`;
     };
 
     // 3. AI가 길잡이를 고른다(20곳씩 나눠 동시에). AI가 안 되거나 시간이 모자라면 가까운 1층 가게로 문장을 만든다.
@@ -109,18 +165,26 @@ export async function POST(req: Request) {
       const destName = end!.name.replace(/^\(시험\)\s*/, "").replace(/\[.*?\]/g, "").trim();
       if (p.action === "arrive") {
         // 도착 카드는 도착지 이름으로
-        return { order: i + 1, action: p.action, instruction: sentenceFor(destName || null, "arrive"), landmark: { name: destName, side: "ahead" }, candidates: [], lat: p.lat, lng: p.lng };
+        // 도착지 좌표(입구 쪽)가 길 위 도착점과 조금이라도 떨어져 있으면 어느 쪽에 보이는지 알려 준다
+        const v = distanceM(p.lat, p.lng, end!.lat, end!.lng) >= 8 ? viewOf(route.track, p) : null;
+        const r = v ? relativeSide(v.from.lat, v.from.lng, v.heading, end!.lat, end!.lng) : undefined;
+        const rel = r === "left" || r === "right" ? r : undefined;
+        return { order: i + 1, action: p.action, instruction: sentenceFor(destName || null, "arrive", false, rel), landmark: { name: destName, side: rel ?? "ahead" }, candidates: [], lat: p.lat, lng: p.lng };
       }
-      const chosen = pick ? pick.candidates.map((n) => list.find((s) => s.name === n)).filter((x): x is NearStore => !!x) : list.slice(0, 3);
+      const chosen = pick ? pick.candidates.map((n) => list.find((s) => s.name === n)).filter((x): x is Spot => !!x) : list.slice(0, 3);
+      if (pick && !chosen.length) chosen.push(...list.slice(0, 3));
       // TMAP이 그 자리 안내에 쓴 이름(지하철 출구 등)은 AI가 빼도 후보에 남긴다
-      const poi = list.find((s) => s.category === "지도 안내에 나오는 곳");
+      const poi = list.find((s) => s.category === POI);
       if (poi && !chosen.includes(poi)) chosen.splice(Math.min(1, chosen.length), 0, poi);
       const candidates = chosen.slice(0, 3).map(toCandidate);
       const first = candidates[0]?.name ?? null;
       // 문장은 AI에게 맡기지 않고 틀로 만든다. 실제로 돌려 보니 AI가 횡단보도를 "곧장 가세요"로 쓰거나
       // "도착했습니다"처럼 말투가 어긋나는 일이 있었다. AI는 잘 보이는 길잡이를 고르는 일만 한다.
-      const instruction = sentenceFor(first, p.action, p.crossing);
-      return { order: i + 1, action: p.action, instruction, landmark: { name: first ?? "", side: "ahead" }, candidates, place: placeFromCandidate(candidates[0]), lat: p.lat, lng: p.lng };
+      // 가게가 보이는 쪽(정면·왼쪽·오른쪽)은 경로 모양과 가게 좌표로 계산해 문장에 넣는다
+      const rel = candidates[0]?.rel;
+      const instruction = sentenceFor(first, p.action, p.crossing, rel, !!p.start);
+      const side = rel === "left" || rel === "right" ? rel : "ahead";
+      return { order: i + 1, action: p.action, instruction, landmark: { name: first ?? "", side }, candidates, place: placeFromCandidate(candidates[0]), start: p.start || undefined, lat: p.lat, lng: p.lng };
     });
 
     // 4. 가게 건물 정보가 없는 카드(도착, 후보 없음, TMAP 이름만 있는 곳)는 그 지점의 건물 이름과 번지를 찾는다
@@ -143,7 +207,8 @@ export async function POST(req: Request) {
     }
 
     const missing = [!hasTmap() && "TMAP", !hasStores() && "상가정보", isMockMode() && "AI"].filter((x): x is string => !!x);
-    const result: PlanResult = { cards, track: route.track, totalDistance: route.totalDistance, totalTime: route.totalTime, mock, missing };
+    const from = (await fromPlace) ?? undefined;
+    const result: PlanResult = { cards, track: route.track, totalDistance: route.totalDistance, totalTime: route.totalTime, mock, missing, from };
     return Response.json(result);
   } catch (e) {
     if (/TMAP/.test(String((e as Error).message))) {

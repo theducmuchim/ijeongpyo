@@ -21,7 +21,7 @@ export function nextCandidate(card: Card): Card {
       ...card,
       candidates: rest,
       landmark: { name: next.name, side: card.landmark.side },
-      instruction: sentenceFor(next.name, card.action, crossing),
+      instruction: sentenceFor(next.name, card.action, crossing, next.rel, card.start),
       place: placeFromCandidate(next) ?? (card.place?.near ? card.place : undefined), // 없으면 그 지점 주소를 다시 찾는다
     };
   }
@@ -30,7 +30,7 @@ export function nextCandidate(card: Card): Card {
     ...card,
     candidates: [],
     landmark: { name: building ?? "", side: card.landmark.side },
-    instruction: sentenceFor(building, card.action, crossing),
+    instruction: sentenceFor(building, card.action, crossing, undefined, card.start),
   };
 }
 

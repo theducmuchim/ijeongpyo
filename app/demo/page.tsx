@@ -168,7 +168,7 @@ function AiStep({ cards, setCards, real, setReal }: { cards: CardDraft[]; setCar
       {phase === "done" && !real && (
         <div className="surface-card">
           <p className="title-medium">진짜 AI로 해 보기</p>
-          <p className="body-medium muted">같은 사진 4장을 실제로 AI에 보내 카드를 만들어요. 하루 사용 횟수가 1번 줄어요.</p>
+          <p className="body-medium muted">같은 사진 4장을 실제로 AI에 보내 카드를 만들어요.</p>
           <button className="btn btn-outlined" style={{ marginTop: 8 }} onClick={tryReal}>
             <Icon name="sparkle" size={18} /> 진짜 AI로 만들어 보기
           </button>
@@ -396,7 +396,7 @@ export default function DemoPage() {
             <>
               <Coach title="2분 만에 둘러보기">
                 미리 그려 둔 거리 사진 4장으로 길을 등록하고, 혼자 걷고, 길을 잃었을 때까지 차례로 보여 줘요. AI 대신 미리 써 둔 답을
-                보여 주니 사용 횟수가 줄지 않아요.
+                보여 주니 AI를 부르지 않아요.
               </Coach>
               <div className="demo-grid">
                 {DEMO_JUNCTIONS.map((j, i) => (

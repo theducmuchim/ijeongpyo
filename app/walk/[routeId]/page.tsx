@@ -352,14 +352,14 @@ function StepStrip({ route, index }: { route: Route; index: number }) {
       <div className="walk-date" aria-label={`${total}장 중 ${index + 1}번째 카드`}>
         <span className="walk-num">{index + 1}</span>
         <span className="walk-of">
-          <b>{SHORT[card.action] ?? ""}</b>
+          <b>{card.start ? "출발" : (SHORT[card.action] ?? "")}</b>
           <small>{total}장 중</small>
         </span>
       </div>
       <div className="step-strip" ref={strip} aria-hidden="true">
         {route.cards.map((c, i) => (
           <span key={c.id} className={`step${i === index ? " on" : i < index ? " done" : ""}`}>
-            <small>{SHORT[c.action] ?? ""}</small>
+            <small>{c.start ? "출발" : (SHORT[c.action] ?? "")}</small>
             <b>{i + 1}</b>
           </span>
         ))}
@@ -379,6 +379,8 @@ export default function WalkPage() {
   const [fullView, setFullView] = useState(false); // 연습 모드에서 이번 걷기만 전부 보기
   const [showPhoto, setShowPhoto] = useState(false); // 연습 2단계: 사진을 잠깐 보기
   const [approach, setApproach] = useState(false);
+  const [farStart, setFarStart] = useState<number | null>(null); // 출발 카드인데 지금 위치가 출발 지점에서 멀면 그 거리(m)
+  const startChecked = useRef(false);
   const offSince = useRef<number | null>(null);
   const indexRef = useRef(0);
   const logged = useRef({ start: false, off: false });
@@ -502,6 +504,18 @@ export default function WalkPage() {
         }
         setAutoMode("auto");
         here.current = { lat, lng };
+        // 걷기를 시작할 때 한 번: 출발 카드 자리에서 멀리 있으면 알린다 (저장해 둔 길을 다른 곳에서 열었을 때)
+        if (!startChecked.current && indexRef.current === 0) {
+          startChecked.current = true;
+          const first = route.cards[0];
+          if (first?.start && first.lat !== undefined && first.lng !== undefined) {
+            const d = Math.round(distanceM(lat, lng, first.lat, first.lng));
+            if (d > 80) {
+              setFarStart(d);
+              speak(`지금 위치가 이 길의 출발 지점에서 약 ${spokenDistance(d)} 떨어져 있어요. 지금 위치에서 다시 만들 수 있어요.`, { queue: true });
+            }
+          }
+        }
         const now = route.cards[indexRef.current];
         const next = route.cards[indexRef.current + 1];
         if (next?.lat !== undefined && next.lng !== undefined) {
@@ -522,7 +536,7 @@ export default function WalkPage() {
           }
         }
         // 처음 가는 길: 사진 없는 카드의 갈림길 50m 전에 한 번 알린다
-        if (now && isDraft(now) && now.lat !== undefined && now.lng !== undefined && !alerted.current.has(now.order)) {
+        if (now && !now.start && isDraft(now) && now.lat !== undefined && now.lng !== undefined && !alerted.current.has(now.order)) {
           if (distanceM(lat, lng, now.lat, now.lng) <= APPROACH_M) {
             alerted.current.add(now.order);
             setApproach(true);
@@ -642,6 +656,25 @@ export default function WalkPage() {
       <AppBar title={route.name} back="/" trailing={<IconLink href={`/review/${route.id}`} icon="edit" label="카드 고치기" />} />
       <div className="body">
         <StepStrip route={route} index={index} />
+        {farStart !== null && index === 0 && (
+          <div className="banner body-medium" role="status" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <span>지금 위치가 출발 지점에서 약 {farStart >= 1000 ? `${(farStart / 1000).toFixed(1)}km` : `${farStart}m`} 떨어져 있어요.</span>
+            {route.dest && (
+              <button
+                className="btn btn-tonal"
+                style={{ alignSelf: "flex-start" }}
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem("ijeongpyo.planDest", JSON.stringify({ name: route.destName ?? route.name, ...route.dest }));
+                  } catch {}
+                  router.push("/plan");
+                }}
+              >
+                <Icon name="flag" size={18} /> 지금 위치에서 다시 만들기
+              </button>
+            )}
+          </div>
+        )}
         {(route.practiceLevel ?? 1) > 1 && (
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span className="chip label-medium">연습 · {LEVEL_TEXT[level]}</span>
