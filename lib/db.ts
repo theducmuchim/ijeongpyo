@@ -51,3 +51,31 @@ export async function deleteRoute(id: string) {
     await db.routes.delete(id);
   });
 }
+
+// 지우기 전에 길과 사진을 잠깐 들고 있다가, '되돌리기'를 누르면 그대로 다시 넣는다
+export type RouteSnapshot = { route: Route; photos: { id: string; blob: Blob; createdAt: string }[] };
+
+export async function deleteRoutes(ids: string[]): Promise<RouteSnapshot[]> {
+  const snaps: RouteSnapshot[] = [];
+  await db.transaction("rw", db.routes, db.photos, async () => {
+    for (const id of ids) {
+      const route = await db.routes.get(id);
+      if (!route) continue;
+      const photoIds = route.cards.map((c) => c.photoId).filter(Boolean);
+      const photos = (await db.photos.bulkGet(photoIds)).filter((x): x is NonNullable<typeof x> => !!x);
+      snaps.push({ route, photos: photos.map((p) => ({ id: p.id, blob: p.blob, createdAt: p.createdAt })) });
+      await db.photos.bulkDelete(photoIds);
+      await db.routes.delete(id);
+    }
+  });
+  return snaps;
+}
+
+export async function restoreRoutes(snaps: RouteSnapshot[]) {
+  await db.transaction("rw", db.routes, db.photos, async () => {
+    for (const s of snaps) {
+      await db.photos.bulkPut(s.photos);
+      await db.routes.put(s.route);
+    }
+  });
+}

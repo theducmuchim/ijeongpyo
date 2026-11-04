@@ -8,9 +8,11 @@ import { VoiceControl, useScreenSpeech } from "@/components/Voice";
 import { db } from "@/lib/db";
 import { josa } from "@/lib/josa";
 import { type Command, PLAN_QUERY_KEY, destFrom, speak, squash } from "@/lib/voice";
+import { routeSubtitle as subtitle } from "@/lib/routeText";
 import type { Route } from "@/types";
 
 const HOME_COMMANDS: Command[] = [
+  { id: "/routes", label: "내 길 찾기", say: ["내 길", "길 찾기", "길 목록", "지우기", "삭제"] },
   { id: "/record", label: "새 길 등록", say: ["새 길", "길 등록", "등록"] },
   { id: "/plan", label: "처음 가는 길", say: ["처음 가는 길", "처음 가는"] },
   { id: "/settings", label: "설정", say: ["설정"] },
@@ -21,22 +23,6 @@ const HOME_COMMANDS: Command[] = [
 
 // 홈: Figma "Schedule Management Platform (2019)"의 Homescreen 구성을 따른다.
 // 초록 머리 그림 → 흰 시트 → "내 길" 가로 카드 → "길 만들기" 큰 카드 → 아래 탭.
-
-function ago(iso?: string) {
-  if (!iso) return "아직 안 걸음";
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-  if (days <= 0) return "오늘 걸음";
-  if (days === 1) return "어제 걸음";
-  if (days < 7) return `${days}일 전 걸음`;
-  return "지난주 이전에 걸음";
-}
-
-function subtitle(r: Route) {
-  if (r.status !== "ready") return "카드 확인 전";
-  const drafts = r.cards.filter((c) => c.source === "draft" && !c.checkedAt).length;
-  if (r.kind === "planned" && drafts > 0) return `사진 ${r.cards.length - drafts}/${r.cards.length}`;
-  return ago(r.lastWalkedAt);
-}
 
 export default function Home() {
   const router = useRouter();
@@ -100,7 +86,14 @@ export default function Home() {
           />
         </section>
         <section className="sheet-sec">
-          <h2 className="sec-title">내 길</h2>
+          <div className="sec-head">
+            <h2 className="sec-title">내 길</h2>
+            {routes && routes.length > 0 && (
+              <Link href="/routes" className="btn btn-text label-large sec-more">
+                찾기·지우기 <LineIcon name="chevron" size={18} />
+              </Link>
+            )}
+          </div>
           <p className="sec-sub">{routes === null ? "불러오는 중…" : routes.length > 0 ? `저장한 길 ${routes.length}개` : "아직 저장한 길이 없어요"}</p>
 
           {routes === null && (

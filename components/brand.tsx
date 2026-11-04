@@ -140,6 +140,7 @@ export function HeroArt() {
 /* ───────────── 아래 탭 ───────────── */
 const TABS: { href: string; label: string; icon: LineIconName; match: (p: string) => boolean }[] = [
   { href: "/", label: "홈", icon: "home", match: (p) => p === "/" },
+  { href: "/routes", label: "내 길", icon: "cards", match: (p) => p.startsWith("/routes") },
   { href: "/plan", label: "처음 가는 길", icon: "route", match: (p) => p.startsWith("/plan") },
   { href: "/guide", label: "설명서", icon: "book", match: (p) => p.startsWith("/guide") || p.startsWith("/demo") },
   { href: "/settings", label: "설정", icon: "user", match: (p) => p.startsWith("/settings") },
