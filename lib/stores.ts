@@ -24,9 +24,11 @@ export async function storesNear(lat: number, lng: number, radius = 40, rows = 8
     `&pageNo=1&numOfRows=${rows}&radius=${radius}&cx=${lng}&cy=${lat}&type=json`;
   // 공공데이터포털이 가끔 답을 안 주고 붙잡고 있어서(실제로 확인), 6초 넘으면 끊는다
   let res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(6000) });
-  // 공공데이터포털은 한꺼번에 여러 번 부르면 429를 준다. 잠깐 쉬었다가 한 번 더.
-  if (res.status === 429) {
-    await new Promise((r) => setTimeout(r, 700));
+  // 공공데이터포털은 1초에 여러 번 부르면 429를 준다. 실제로 재 보니 한 번 쉬고 다시 불러도 또 429가 나서
+  // 길잡이 없는 카드가 많이 생겼다. 쉬는 시간을 늘려 가며 세 번까지 다시 부른다.
+  for (const wait of [800, 1600, 2600]) {
+    if (res.status !== 429) break;
+    await new Promise((r) => setTimeout(r, wait + Math.random() * 300));
     res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(6000) });
   }
   const text = await res.text();

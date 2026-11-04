@@ -99,7 +99,7 @@ export async function POST(req: Request) {
     const fromPlace = hasTmap() ? reverseGeocode(start!.lat, start!.lng).catch(() => null) : Promise.resolve(mockPlace(start!.lat, start!.lng));
 
     // 2. 지점마다 주변 가게 (없으면 반경을 넓혀 한 번 더). 상가정보 키가 없으면 TMAP의 근처 장소 이름이라도 쓴다.
-    // 공공데이터포털이 한꺼번에 부르면 429를 주므로 3곳씩 나눠 부른다
+    // 공공데이터포털이 한꺼번에 부르면 429를 주므로 나눠 부른다
     const lookup = async (p: TurnPoint, i: number): Promise<Spot[]> => {
       // 출발 카드는 걸어 나갈 길 30m 앞 언저리에서 찾는다
       const at = p.start && route.track.length > 1 ? pointAlong(route.track, nearestIndex(route.track, p.lat, p.lng), 30) : p;
@@ -124,8 +124,10 @@ export async function POST(req: Request) {
       return ranked;
     };
     const nearby: Spot[][] = [];
-    for (let k = 0; k < points.length; k += 3) {
-      nearby.push(...(await Promise.all(points.slice(k, k + 3).map((p, j) => lookup(p, k + j)))));
+    // 2곳씩 부르고 사이에 조금 쉰다 (공공데이터포털 초당 한도)
+    for (let k = 0; k < points.length; k += 2) {
+      if (k) await new Promise((r) => setTimeout(r, 250));
+      nearby.push(...(await Promise.all(points.slice(k, k + 2).map((p, j) => lookup(p, k + j)))));
     }
     const describe = (p: TurnPoint, i: number, n: number) => {
       const shops = nearby[i]
