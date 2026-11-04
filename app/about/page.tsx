@@ -1,33 +1,154 @@
-import { AppBar } from "@/components/ui";
+import Link from "next/link";
+import { AppBar, Icon } from "@/components/ui";
+
+export const metadata = { title: "DTD 알아보기 · 이정표" };
+
+// 발달성 지형적 방향감각 상실증(DTD) 설명. 숫자는 아래 '참고한 연구'에 적은 논문에서 가져왔다.
+// 진단이나 치료를 약속하지 않는다. 연구마다 숫자가 다르다는 것도 그대로 적는다.
+
+function Sec({ n, id, title, children }: { n: number; id: string; title: string; children: React.ReactNode }) {
+  return (
+    <section id={id} className="guide-sec">
+      <h2>
+        <span className="sec-num">{n}</span>
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
 
 export default function AboutPage() {
   return (
     <main className="screen">
       <AppBar title="자주 길을 잃나요?" back="/" />
-      <div className="body">
-        <p className="body-large">
-          오래 산 동네나 매일 다니는 길에서도 방향을 잃는 증상이 있어요. 발달성 지형적 방향감각 상실증(DTD)이라고 하고,
-          연구에 따라 100명 중 2~3명꼴로 있다고 봐요.
-        </p>
-        <div className="surface-card">
-          <p className="title-medium">지능이나 기억력과는 관계없어요</p>
-          <p className="body-medium muted">
-            건물과 간판은 잘 알아봐요. 그것들을 머릿속 지도로 잇는 게 어려워서, 외운 순서가 한 번 틀어지면 길을 다시 찾기
-            힘들어요.
+      <div className="body" style={{ gap: 24 }}>
+        <div className="coach">
+          <p className="title-large">익숙한 길에서도 길을 잃는다면</p>
+          <p className="body-large">
+            오래 산 동네나 매일 다니는 길에서도 방향을 잃는 사람이 있어요. 뇌를 다친 적도 없고 다른 일은 잘하는데, 어릴 때부터
+            길만 유난히 못 찾는 경우예요. 연구자들은 이것을 <b>발달성 지형적 방향감각 상실증</b>, 줄여서 <b>DTD</b>라고 불러요.
           </p>
         </div>
-        <div className="surface-card">
-          <p className="title-medium">이정표가 하는 일</p>
-          <p className="body-medium muted">
-            지도 대신 &ldquo;꽃집을 오른쪽에 두고 골목으로 들어가세요&rdquo;처럼 눈에 보이는 길잡이로 안내해요. 길을 잃으면 주변
-            사진을 찍어서 지금 어디쯤인지 찾아 줘요.
+
+        <Sec n={1} id="what" title="어떤 상태인가요">
+          <p>
+            2009년 캐나다의 주세페 이아리아(Giuseppe Iaria) 연구팀이 처음 보고했어요. 평생 길을 잃으며 살아온 43세 여성이었는데,
+            기억력이나 지능 검사는 모두 보통이었고 뇌 사진에서도 다친 곳이 없었어요. 그런데도 날마다 다니는 길에서 방향을 잃었어요.
           </p>
-        </div>
-        <div className="surface-card tonal-card">
-          <p className="title-medium">진단은 하지 않아요</p>
-          <p className="body-medium">
-            생활이 많이 불편하면 신경과나 신경심리 전문가와 상담해 보세요. 길찾기는 연습으로 나아질 수 있다는 연구도 있어요.
+          <p>
+            DTD는 아직 병원에서 쓰는 공식 진단명은 아니에요. 연구에서 쓰는 이름이고, 어디까지를 DTD로 볼지도 연구자마다 조금씩
+            달라요.
           </p>
+        </Sec>
+
+        <Sec n={2} id="common" title="얼마나 흔한가요">
+          <p>
+            연구마다 다르게 나오지만, 대략 100명 중 1~3명꼴로 봐요. 이탈리아에서 18~35세 1,698명을 조사한 연구에서는 약 3%가 DTD에
+            해당했어요. 다만 설문으로 찾는지, 실제로 길을 찾게 해 보고 찾는지에 따라 숫자가 꽤 달라져서, 정확한 비율은 아직 연구
+            중이에요.
+          </p>
+          <p>길을 못 찾는 건 흔한 일이라 &lsquo;원래 방향 감각이 없는 편&rsquo;이라고 넘기기 쉬워요. 그래서 스스로 DTD인 줄 모르는 사람이 많아요.</p>
+        </Sec>
+
+        <Sec n={3} id="daily" title="생활에서는 이렇게 나타나요">
+          <ul>
+            <li>익숙한 곳에서도 일주일에 몇 번씩 길을 잃어요.</li>
+            <li>한 번 지나간 길을 다시 지나가도 처음 보는 길처럼 느껴져요.</li>
+            <li>가끔 가는 친구 집이나 병원을 찾아가기 어려워요.</li>
+            <li>가게나 건물에서 나오면 어느 쪽에서 들어왔는지 헷갈려요.</li>
+            <li>우리 동네가 머릿속에서 지도처럼 그려지지 않아요.</li>
+            <li>그래서 낯선 곳에 가는 것을 피하거나, 집에서 먼 학교나 일자리를 포기하기도 해요.</li>
+          </ul>
+          <p>
+            이탈리아 연구에서 DTD가 있는 사람 54명과 없는 사람 54명을 비교했더니, 한 번 지나간 길을 다시 지날 때 알아본 사람이 DTD
+            쪽은 6%, 다른 쪽은 87%였어요. 자기 동네를 머릿속에 그릴 수 있다는 사람도 39%와 94%로 차이가 컸어요.
+          </p>
+        </Sec>
+
+        <Sec n={4} id="fine" title="잘 되는 것도 많아요">
+          <p>
+            DTD는 지능이나 기억력이 낮아서 생기는 게 아니에요. 같은 연구에서 왼쪽·오른쪽을 헷갈리는 정도, 비슷한 물건 사이에서 내
+            지갑이나 열쇠를 알아보는 것, 길을 떠올릴 때 간판이나 건물을 그려 보는 것은 다른 사람과 차이가 없었어요.
+          </p>
+          <p>
+            즉 <b>간판과 건물은 잘 알아보는데, 그것들을 이어서 머릿속 지도로 만드는 게 어려운</b> 거예요.
+          </p>
+        </Sec>
+
+        <Sec n={5} id="why" title="왜 그런가요">
+          <p>
+            길을 찾는 방법은 크게 두 가지예요. 하나는 &ldquo;약국에서 오른쪽, 그다음 은행에서 왼쪽&rdquo;처럼 순서를 외우는 방법이고,
+            다른 하나는 동네 전체를 위에서 본 지도처럼 머릿속에 그려 두는 방법이에요. 지도가 있으면 순서가 한 번 틀어져도 다른 길로
+            돌아갈 수 있어요.
+          </p>
+          <p>
+            DTD가 있는 사람은 순서를 외우는 방법에 많이 기대고, 머릿속 지도를 만드는 데 어려움이 있다고 봐요. 그래서 외운 순서에서
+            한 번 벗어나면 어디로 가야 할지 알기 힘들어요.
+          </p>
+          <p>
+            뇌 영상 연구에서는 기억과 공간을 맡는 해마와, 계획을 세우는 앞이마엽 사이의 연결이 약하게 나타났어요. 또 DTD가 있는 6명의
+            가족 19명을 조사했더니 그중 10명도 DTD였다는 연구가 있어서, 타고나는 영향이 있을 수 있다고 봐요. 아직 원인이 다 밝혀진
+            건 아니에요.
+          </p>
+        </Sec>
+
+        <Sec n={6} id="feel" title="마음도 함께 지쳐요">
+          <p>
+            길을 잃을까 봐 늘 걱정하고, 길을 잃은 자기 모습을 부끄러워하는 사람이 많아요. 연구에서도 DTD가 있는 사람은 걱정이나
+            기분이 가라앉는 일이 더 많다고 나왔어요. 주변 사람이 &ldquo;왜 이렇게 길을 못 찾아&rdquo;라고 탓하기보다, 어느 갈림길에서
+            헷갈리는지 같이 봐 주는 게 도움이 돼요.
+          </p>
+        </Sec>
+
+        <Sec n={7} id="help" title="이정표는 이렇게 도와요">
+          <p>
+            머릿속 지도를 만들기 어렵다면, 지도를 보여 주는 대신 <b>잘 알아보는 간판과 건물을 순서대로</b> 보여 주면 돼요. 이정표는
+            갈림길마다 사진 한 장과 &ldquo;대우당약국 앞 횡단보도를 건너세요&rdquo; 같은 문장 하나로 안내해요.
+          </p>
+          <ul>
+            <li>동서남북이나 &ldquo;200m 직진&rdquo; 대신, 눈에 보이는 길잡이로 말해요.</li>
+            <li>길에서 벗어나면 알려 주고, 길을 잃으면 주변 사진을 찍어서 지금 어디쯤인지 찾아 줘요.</li>
+            <li>그래도 모르겠으면 지나가는 사람에게 보여 줄 큰 글씨 화면이 있어요.</li>
+          </ul>
+          <p>
+            길잡이를 넣어 안내를 받은 사람이 길을 더 잘 기억했다는 연구를 바탕으로 만들었어요. 다만 이정표는 길을 안내하는
+            앱이고, DTD를 낫게 하는 앱은 아니에요.
+          </p>
+        </Sec>
+
+        <Sec n={8} id="doctor" title="진단과 상담">
+          <p>
+            이정표는 진단을 하지 않아요. 길을 잃는 일 때문에 생활이 많이 불편하면 신경과나 신경심리 전문가와 상담해 보세요. 어릴 때부터
+            그랬는지, 뇌를 다친 적이 있는지, 다른 어려움은 없는지를 함께 살펴봐요. 어른이 되고 나서 갑자기 길을 잃기 시작했다면 다른
+            원인일 수 있으니 꼭 병원에 가 보세요.
+          </p>
+          <p>
+            DTD만을 위한 치료법은 아직 없어요. 가상 동네에서 길을 익히는 훈련 프로그램처럼 머릿속 지도를 만드는 연습을 돕는 방법이
+            연구되고 있지만, DTD가 있는 사람에게 효과가 있는지는 아직 확인 중이에요.
+          </p>
+        </Sec>
+
+        <section className="guide-sec" aria-labelledby="refs">
+          <h2 id="refs">참고한 연구</h2>
+          <ul className="label-large muted">
+            <li>Iaria 외 (2009). 처음 보고된 DTD 사례. Neuropsychologia.</li>
+            <li>Iaria 외 (2014). 해마와 앞이마엽 사이 연결.</li>
+            <li>Barclay 외 (2016). 가족 안에서 함께 나타나는 DTD.</li>
+            <li>Burles &amp; Iaria (2020). DTD가 있는 사람 1,211명의 특징.</li>
+            <li>Nori 외 (2022), Piccardi 외 (2022). 이탈리아 청년 조사와 54명 비교 연구.</li>
+            <li>Bonavita 외 (2025). 설문과 실제 길찾기 검사 비교. Brain Sciences.</li>
+            <li>Wunderlich 외 (2022). 길잡이를 넣은 안내와 길 기억.</li>
+          </ul>
+        </section>
+
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <Link href="/demo" className="btn btn-filled">
+            <Icon name="sparkle" size={20} /> 체험하기
+          </Link>
+          <Link href="/guide" className="btn btn-outlined">
+            사용 설명서
+          </Link>
         </div>
       </div>
     </main>
