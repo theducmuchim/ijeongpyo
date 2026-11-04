@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CornerBlob, HeroArt, LineIcon, TabBar, TONES } from "@/components/brand";
+import { CornerBlob, LineIcon, TabBar, TONES } from "@/components/brand";
 import { VoiceControl, useScreenSpeech } from "@/components/Voice";
 import { db } from "@/lib/db";
 import { josa } from "@/lib/josa";
@@ -72,7 +72,8 @@ export default function Home() {
             <p className="hero-sub">눈에 보이는 간판을 따라 걷는 길안내</p>
           </div>
         </div>
-        <HeroArt />
+        {/* eslint-disable-next-line @next/next/no-img-element -- 배경 사진 한 장, 최적화 없이 그대로 */}
+        <img className="hero-photo" src="/home-hero.jpg" alt="" aria-hidden="true" />
       </header>
 
       <div className="sheet">

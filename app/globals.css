@@ -1163,6 +1163,24 @@ textarea.field { resize: vertical; min-height: 64px; }
 .glass-btn:active { background: rgba(255, 255, 255, 0.2); }
 .hero-name { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
 .hero-sub { margin: 2px 0 0; font-size: 13px; opacity: 0.75; }
+/* 홈 머리: 동네를 내려다본 실제 사진. 위쪽은 제목이 읽히게 진한 초록, 아래로 갈수록 사진이 보이게 */
+.hero-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 41, 30, 0.82) 0%, rgba(0, 41, 30, 0.45) 38%, rgba(0, 41, 30, 0.08) 75%, rgba(0, 41, 30, 0.2) 100%);
+  pointer-events: none;
+}
+.hero .glass-btn { background: rgba(0, 0, 0, 0.28); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.hero .hero-sub { opacity: 0.9; }
 .hero-art {
   position: absolute;
   left: 0;
