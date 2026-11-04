@@ -395,8 +395,7 @@ export default function DemoPage() {
           {step === "intro" && (
             <>
               <Coach title="2분 만에 둘러보기">
-                실제 거리 사진 4장으로 길을 등록해서 걸어 보고, 길을 잃었을 때 어떻게 하는지까지 차례로 보여 줘요. AI 답은 미리
-                써 둔 예시예요.
+                대전역 가는 길을 예로 들어, 길을 등록해서 걷는 과정을 처음부터 보여 줘요. 길을 잃었을 때 다시 찾는 방법도 나와요.
               </Coach>
               <div className="demo-grid">
                 {DEMO_JUNCTIONS.map((j, i) => (
