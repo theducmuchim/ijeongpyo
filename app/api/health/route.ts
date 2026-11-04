@@ -50,13 +50,13 @@ export async function GET(req: Request) {
       return { status: r.status, ms: Date.now() - t, models: [...aiTrace], result: await r.json() };
     };
     const cards = [
-      { order: 1, photoDescription: "왼쪽 건물 1층에 초록 간판 '꽃집 초록뜰'과 초록·흰색 줄무늬 차양. 가게 왼쪽으로 골목이 있다.", landmarkName: "초록 간판 꽃집", instruction: "초록 간판 꽃집을 끼고 왼쪽 골목으로 가세요" },
-      { order: 2, photoDescription: "왼쪽에 초록 간판 '온누리약국', 길 건너 빨간 간판 분식집. 바로 앞에 횡단보도가 있다.", landmarkName: "온누리약국", instruction: "온누리약국을 지나 횡단보도를 건너세요" },
-      { order: 3, photoDescription: "왼쪽 1층에 파란 간판 '하늘편의점'과 파란·흰색 줄무늬 차양. 오른쪽에 가로수와 가로등.", landmarkName: "파란 간판 편의점", instruction: "파란 간판 편의점 앞에서 오른쪽으로 가세요" },
-      { order: 4, photoDescription: "정면에 '한빛중학교' 글자가 있는 정문과 철문.", landmarkName: "한빛중학교 정문", instruction: "한빛중학교 정문이 보이면 도착이에요" },
+      { order: 1, photoDescription: "왼쪽 건물에 노란 간판 'ABC-MART'와 그 위 검은 간판 '확실한 치과'. 옆 회색 건물에 흰 나이키 로고.", landmarkName: "노란 간판 ABC마트", instruction: "노란 간판 ABC마트를 지나 큰길을 따라 곧장 가세요" },
+      { order: 2, photoDescription: "왼쪽 모퉁이 건물에 '대우당약국'과 '대우당건강' 간판. 오른쪽 아래에 횡단보도.", landmarkName: "대우당약국", instruction: "대우당약국 앞 횡단보도를 건너세요" },
+      { order: 3, photoDescription: "왼쪽에 유리 지붕을 씌운 지하철 입구. 뒤 건물에 검은 간판 '정덕영비뇨기과'.", landmarkName: "지하철 입구", instruction: "지하철 입구를 지나 오른쪽으로 가세요" },
+      { order: 4, photoDescription: "정면에 흰 지붕과 빨간 기둥이 있는 대전역 건물.", landmarkName: "대전역 빨간 기둥 건물", instruction: "빨간 기둥이 있는 대전역 건물이 보이면 도착이에요" },
     ];
     if (which === "cards") {
-      const notes = ["꽃집에서 왼쪽", "약국 지나서 횡단보도 건너기", "파란 편의점에서 오른쪽", "학교 정문 도착"];
+      const notes = ["ABC마트 지나 곧장", "대우당약국 앞 횡단보도 건너기", "지하철 입구에서 오른쪽", "대전역 도착"];
       const junctions = await Promise.all(notes.map(async (note, i) => ({ photo: await photo(`demo-${i + 1}.jpg`), note })));
       return Response.json(await call(cardsFromWalk, { junctions }));
     }
@@ -67,14 +67,14 @@ export async function GET(req: Request) {
       return Response.json(
         await call(replaceLandmark, {
           photo: await photo("demo-1-changed.jpg"),
-          card: { order: 1, photoDescription: cards[0].photoDescription, landmarkName: "초록 간판 꽃집", side: "left", action: "left", instruction: cards[0].instruction, userNote: "" },
+          card: { order: 1, photoDescription: cards[0].photoDescription, landmarkName: "노란 간판 ABC마트", side: "left", action: "straight", instruction: cards[0].instruction, userNote: "" },
           nextInstruction: cards[1].instruction,
         }),
       );
     }
   }
 
-  // ?check=1: 체험용 사진(온누리약국 간판이 있는 그림)으로 사진 확인을 실제로 한 번 해 본다
+  // ?check=1: 체험용 사진(대우당약국 간판이 있는 로드뷰 사진)으로 사진 확인을 실제로 한 번 해 본다
   if (url.searchParams.get("check")) {
     const img = await fetch("https://ijeongpyo-one.vercel.app/demo/demo-2.jpg", { cache: "no-store" });
     const base64 = Buffer.from(await img.arrayBuffer()).toString("base64");
@@ -83,7 +83,7 @@ export async function GET(req: Request) {
       new Request("http://local/api/check-landmark", {
         method: "POST",
         headers: { "content-type": "application/json", "x-device-id": "health-check" },
-        body: JSON.stringify({ photo: { base64, mediaType: "image/jpeg" }, expected: "온누리약국", candidates: ["하늘편의점"], action: "right", instruction: "온누리약국에서 오른쪽으로 가세요" }),
+        body: JSON.stringify({ photo: { base64, mediaType: "image/jpeg" }, expected: "대우당약국", candidates: ["대우당건강"], action: "straight", instruction: "대우당약국 앞 횡단보도를 건너세요" }),
       }),
     );
     return Response.json({ status: r.status, ms: Date.now() - t, imageBytes: base64.length, check: await r.json() });

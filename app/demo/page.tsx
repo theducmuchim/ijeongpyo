@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AiWaiting, AppBar, Icon } from "@/components/ui";
 import { requestCards } from "@/lib/api";
-import { DEMO_CARDS, DEMO_FIX, DEMO_JUNCTIONS, DEMO_LOST, fetchDemoPhoto, saveDemoRoute } from "@/lib/demo";
+import { DEMO_CARDS, DEMO_FIX, DEMO_JUNCTIONS, DEMO_LOST, DEMO_PHOTO_CREDIT, DEMO_ROUTE_NAME, fetchDemoPhoto, saveDemoRoute } from "@/lib/demo";
 import { blobToPayload } from "@/lib/image";
 import { toast } from "@/lib/toast";
 import type { CardDraft } from "@/types";
@@ -235,7 +235,7 @@ function WalkStep({ cards }: { cards: CardDraft[] }) {
         카드 한 장이 갈림길 하나예요. 지도 대신 사진과 문장만 봐요. 건물 사이처럼 위치가 잘 안 잡히면 &lsquo;다음 카드&rsquo;를 직접
         눌러요.
       </Coach>
-      <Preview title="체험: 학교 가는 길">
+      <Preview title={DEMO_ROUTE_NAME}>
         <div className="progress">
           <span className="label-large muted">
             {i + 1} / {cards.length}
@@ -395,7 +395,7 @@ export default function DemoPage() {
           {step === "intro" && (
             <>
               <Coach title="2분 만에 둘러보기">
-                미리 그려 둔 거리 사진 4장으로 길을 등록하고, 혼자 걷고, 길을 잃었을 때까지 차례로 보여 줘요. AI 대신 미리 써 둔 답을
+                실제 거리 사진 4장으로 길을 등록하고, 혼자 걷고, 길을 잃었을 때까지 차례로 보여 줘요. AI 대신 미리 써 둔 답을
                 보여 주니 AI를 부르지 않아요.
               </Coach>
               <div className="demo-grid">
@@ -407,7 +407,7 @@ export default function DemoPage() {
                   </div>
                 ))}
               </div>
-              <p className="body-medium muted">사진은 실제 장소가 아니라 체험용으로 그린 그림이에요.</p>
+              <p className="body-medium muted">{DEMO_PHOTO_CREDIT}. 카드와 AI 답은 미리 써 둔 예시예요.</p>
             </>
           )}
           {step === "record" && <RecordStep />}

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { bearingDeg, distanceM } from "@/lib/geo";
 
 // 출발 전 미리 둘러보기: 카카오 로드뷰를 실시간 뷰어로만 보여 준다.
-// 카카오 정책상 화면 캡처·저장·AI 분석은 하지 않는다 (사람이 보는 용도만).
+// 여기서는 보기만 한다. (체험하기 사진 6장은 운영자가 약관을 확인한 뒤 로드뷰에서 따로 찍어 public/demo에 둔 것)
 // NEXT_PUBLIC_KAKAO_JS_KEY = 카카오 개발자 사이트의 'JavaScript 키'. 브라우저에서 쓰는 키라 사이트 도메인을 등록해야 동작한다.
 const KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
 
